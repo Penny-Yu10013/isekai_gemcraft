@@ -62,6 +62,8 @@
 - **index 集合必須對齒 96 鏡像對稱**:冠部翻面會鏡像方位(t→96−t),非對稱集合會冠亭對不上。
 - 桌面(角度 0)自旋不影響法線 → `indices:[96], indexFree:true`。
 - d 值(×R)校準過:oct8 P1=0.735(底尖剛好收攏在 −1.04R,預成形底蓋 −1.05R 被吃掉);SRB 六層見 `DIAGRAMS`。
+- **垂直腰刀 `side:'girdle'`**(角度 90°):塑八角/三角等直邊腰圍。相鄰兩刀交角頂點 = d/cos(半夾角),必須 **< 1.0R** 否則與 24 角柱側面共面(退化風險):八角 d≤0.90(頂點 0.974R)、三角 d≤0.49(頂點 0.98R)。
+- **軸向預算**:亭部 −1.05R、**冠部只有 +0.55R**——冠部各 tier 平面在軸心的高度(d/cosθ)可以超過 0.55(那層只切外圈環帶),但**桌面 d 必須 < 0.55**,多層冠 tier 的斷點高度要全程追蹤。d 的幾何公式與逐 tier 鏈式計算見 `新增切型指南.md`。
 
 ---
 
@@ -96,6 +98,7 @@
   - 每顆石頭在提交/報廢時用 `captureStoneThumb`(shotR 離屏渲染 96px JPEG ~3KB)拍縮圖入盤;結算卡兩欄:左=鏟子 SVG+縮圖彈跳撒入(`pourIn`),右=hero 主角石實時 3D 旋轉(`startHero`,MeshPhysicalMaterial+自產 envMap 亮晶晶)+原數據/鑑定
   - `Vault`(key `gemcraft.vault.v1`):一爐=一盤(session.vid/date),同 uid 重提交=覆蓋;上限 600 顆,超額砍最舊非⭐;無痕/擋儲存靜默降級
   - 蒐集頁(`#galleryScreen`,選石畫面/結算 foot 進入):一盤一卡按日期,點石頭開詳情(參數+⭐最滿意,⭐石在盤中放大)
+- [x] **圖紙庫擴充至 5 份 + 垂直腰刀**(2026-07 第四輪):新增 **八角階梯 Asscher 49**(8 indices 階梯切工)、**迴環重瓣 Portuguese 97**(16 折三層齒位交錯,含 24 腰稜共 121 面壓測通過)、**三稜 Trillion 16**(3 折,96/3=32 齒一格)。新機制 `side:'girdle'`(垂直腰刀,角度 90°,亭部模式下切不翻面,`TIER_LABEL` 顯示「腰」,`recordDiagramCut` 視同 pavilion 側勾銷)——用來把 24 角柱腰圍塑成八角/三角直邊外形。五份圖紙 `#dev` 全掃 100% 命中、偏差 0°;玩家路徑(預成形→點 tier→陣列快切)驗證通過。**新增切型的完整方法論見 `新增切型指南.md`**。
 - [x] **左欄排版修正 + 淺色石稜線描邊**(2026-07 第四輪,修用戶回報兩個視覺 bug):
   - **左欄不再互蓋**:`#diagramPanel` 原本絕對定位 `top:190px`,圖紙模式會蓋住第三顆 🎨 附魔轉色鈕(用戶:「這個按鈕只有我會知道而已」);現在整個收進 `#leftTools` 的 flex column 正常排版流(HTML 也搬進去了),`#tintRow` 調色盤改成按鈕正下方原地展開(6×2 grid,不再是浮在 3D 畫面上的絕對定位 popover),開合會把指令表往下推,三者永不重疊。`#diagramPanel` max-height 56vh→48vh 補償排版流起點變低。
   - **淺色石看得到刻面**:白鑽在切割視圖整坨死白、刻面邊界讀不出來 → `rebuildStone` 對亮度 lum>0.85 的石色(白鑽 0xdce8f2)疊一層 `EdgesGeometry` 深色稜線(石色×0.38)+ 面色×0.9 微降亮 + 兩個面材質開 polygonOffset 防線面 z-fighting;深色石完全不動。稜線是 stoneMesh 的 child,跟著傾斜/自旋,導覽器 top view 也看得到;rebuild 時會 dispose 舊稜線。已用 `#dev` oct8 全程切完驗證 17/17 命中、偏差 0°,切割數學不受影響。
@@ -124,19 +127,21 @@
 
 優先級是用戶醒來再定,以下是池子:
 
-- ~~切割圖紙 / 目標範本~~ **已做**(見第 3 節)。**擴充圖紙庫**還在池子裡:資料來源 `gemologyproject.com/wiki/index.php?title=Faceting_Designs`,但注意 wiki 純文字**沒有**角度表,實際數據在各設計頁的 PDF / GemCAD(.gem)下載檔裡 → 新圖紙要手工轉錄成 `DIAGRAMS` 格式再用 `#dev` 校準 d 值(流程見 2.6 與 `__diag`)。授權注意:部分作者(如 Surgical Precision Gems)有明確使用限制,轉錄前看各頁授權。
+- ~~切割圖紙 / 目標範本~~ **已做**;~~擴充圖紙庫~~ **已做第一輪**(2026-07 加了 Asscher 49 / Portuguese 97 / Trillion 16,共 5 份,見第 3 節)。**再加新切型看 `新增切型指南.md`**(完整格式/數學/校準流程/授權注意,可直接發包給其他模型)。
 - ~~魔法陣列快切~~ **已做**(`#arrayCutBtn`)。GemCutter 的 mirror split/offset 進階模式還沒做,要做花式切割再說。
-- **附魔系統**:指定石種名稱 + 處理方式(加熱/輻照/充填/擴散/鍍膜),並用附魔當「清除 dop 蠟痕、恢復透明度」的敘事理由。
-- **真 AI 鑑定**:目前是本地毒舌產生器。要接真 Claude API 得處理 key + CORS(純前端檔案做不到,需要中介)。
+- **附魔系統**:指定石種名稱 + 處理方式(加熱/輻照/充填/擴散/鍍膜),並用附魔當「清除 dop 蠟痕、恢復透明度」的敘事理由。(轉色部分已做,見 🎨 附魔轉色)
 - **Minecraft 第一人稱選石手**:選石畫面目前是純卡片,沒有持 dop 的第一人稱手。
-- **多種 index 齒數**:目前只支援 **96 齒**。GemCutter 用 **80 齒** gear,有些花式切割要 80 齒才能做 **5 折對稱**(96 不整除 5)。後期可考慮讓玩家選齒數(96/80/…),`setIndex`/折數計算要跟著改成參數化齒數。
-- **音效**:研磨聲、拋光聲、完成音。
-- **石頭質感**:用戶提過「不夠像寶石」的方向還沒深做(目前靠彩色點光的高光,沒有環境反射 envMap、沒有透射 transmission)。拋光階段可考慮 `MeshPhysicalMaterial` + 程序生成 envMap。
+- **多種 index 齒數(80 齒)**:5 折對稱需要(96 不整除 5)。工程量與改動點分析見 `新增切型指南.md` 第 6 節。
+- ~~音效~~ **已做**(全程序化 WebAudio `SFX`,見程式地圖)。
 - ~~研磨機模型導入~~ **已導入**(見第 3 節)。`machine_model/` 資產:`gem_faceting_machine.blend`(含魔法陣閃爍動畫 fr1-250)、`.glb`、`build_machine.py`(全程序化,改參數重跑 25 秒重生一台)、`inject_glb.ps1`(重生後把 GLB 重新 base64 注入 gemcraft.html)、三張 render。
   - 模型更新流程:改 `build_machine.py` → `blender -b --factory-startup -P build_machine.py` → `inject_glb.ps1` → Ctrl+R。
   - 座標換算:Blender (x,y,z) → glTF (x,z,−y);模型 lap r=0.125m → 遊戲 lap r=2.6 → 縮放 ×20.8,root 位移 (2.08,−3.762,0)。
   - 建模心得:Blender 5.1 headless 可全自動;燈光瓦數按「燈到物距離平方」縮(0.5m 內桌面景 10W 級就夠,100W 把黑鐵洗成灰);色彩轉換 Khronos PBR Neutral 比 AgX 接近 Three.js;5.1 動畫是 slotted actions(fcurve 在 `action.layers[0].strips[0].channelbag(slot)`)。
-  - **下一階段候選:完全綁定**——石頭長在機臂上、quill 傾角=角度滑桿、分度輪=index,整個視覺 paradigm 換成真機視角。工程大,會動到 2.2 的手感核心,要做先開分支檔備份。
+
+**用戶已裁定不做**(2026-07,別再提案):
+- **機台完全綁定**(石頭長在機臂上、quill=角度、分度輪=index):重構風險大,會動到 2.2 手感核心。
+- **真 AI 鑑定**(接 Claude API):本地預填文字就夠,不處理 key+CORS 中介。
+- **透射材質 transmission / 進階光影**:效能與幾何複雜度風險,不做。
 
 ---
 
@@ -146,7 +151,7 @@
 |---|---|
 | 晶系定義、原石形狀 | `SYSTEMS` 陣列、`buildOctahedron`/`buildPrism`/`buildBox`/`buildTriclinic` |
 | 切割數學 | `clipSolid`、`cutAtPlane`(絕對平面)、`doCut`(相對深度)、`preform` |
-| **圖紙資料(加新圖紙改這)** | `DIAGRAMS` 陣列(格式與陷阱見 2.6) |
+| **圖紙資料(加新圖紙改這)** | `DIAGRAMS` 陣列(格式與陷阱見 2.6;完整方法論見 `新增切型指南.md`)+ 選石畫面 `#diagramRow` 加卡 |
 | **圖紙預成形 / 標準粗胚 R** | `preformDiagram`(24 角柱、腰圍 y=0、`state.diagram.R`) |
 | **深度止停** | `depthStopActive`/`depthStopD`/`updateDepthStopUI`、`startPress` 的 `pressLimit`、`animate` 的 clamp |
 | **指令表面板 / tier 帶入 / 勾銷** | `renderDiagramPanel`、`activateTier`、`recordDiagramCut`、`flashWarn` |
