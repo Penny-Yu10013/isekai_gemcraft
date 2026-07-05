@@ -1,0 +1,191 @@
+# 異世界魔法石工坊 — 開發交接文件 (claude.md)
+
+> 給未來的我 / 未來的 AI session：這份是**目前實作狀態**的交接,不是原始需求。
+> 原始需求規格在 `isekai_gemcraft_claude.md`(v1.0 概念文件),那份不要改,當願景參考。
+> 這份 `claude.md` 是「現在做到哪、怎麼動、接下來做什麼」。
+
+---
+
+## 0. 一句話
+
+模擬真實寶石切割機的網頁小遊戲,單一 HTML 檔。選晶系(+可選切割圖紙)→ 傾斜石頭設角度/方位(+深度止停)→ 盲切 → 拋光 → 中二鑑定。
+
+**主程式：`gemcraft.html`(單檔,雙擊用瀏覽器開,需連網載 Three.js CDN)。**
+
+---
+
+## 1. 怎麼跑 / 怎麼改
+
+- **跑**：雙擊 `gemcraft.html`,或瀏覽器開檔案。改完檔案要手動 **Ctrl+R** 重新整理(本機檔案不會自動刷新)。
+- **改**：全部程式在那一個 HTML 檔裡,沒有 build、沒有套件安裝。`<style>` 是樣式,`<script>` 是邏輯。
+- **依賴**：只有一個 → Three.js r128(CDN `cdnjs`)。離線打不開。
+
+---
+
+## 2. 最重要的架構決策(別推翻,踩過坑)
+
+### 2.1 切割算法 = 凸多面體 + 平面裁切(不是 voxel,不是 CSG library)
+原始規格建議 voxel + marching cubes,**那是錯的**:切不出寶石要的鏡面平刻面,輸出是圓鈍肉塊,而且吃記憶體。
+
+實際做法:石頭存成**凸多面體**(頂點 + 面),每一刀 = 一個半空間平面把多面體裁掉一塊。
+- 核心函式 `clipSolid(solid, n, d)`：保留 `dot(n,v) <= d` 那一側,回傳新多面體。
+- 精確、刻面永遠平整、刻面數無上限、不需任何 CSG 套件。
+- **代價**：只能凸形,不能有內部孔洞/內含物。但 faceted 寶石本來就是凸的,無損。
+- 風險:`stitchLoop`(把切面邊界縫成新面)在極端切法下理論上可能破面,目前測試沒爆,但若之後看到破面先查這裡。
+
+### 2.2 切割機的「傾斜模型」(這是手感的核心,很重要)
+真實切割機:**轉盤(lap)水平,石頭+dop 桿傾斜+自旋,壓上去**。
+
+- `rigQuaternion()` = 只含**傾斜(角度)+ 自旋(index)**,給 **dop 桿**用,桿子永遠從上方來、**不翻面**。
+- `stoneQuaternion()` = rig + **冠部時翻面 180°**(模擬重新黏石),給**石頭**用。
+- 切割平面永遠是「世界的水平向下」,用 `stoneQuaternion()` 的逆轉進石頭局部座標來切。
+- 所以拉角度滑桿石頭會即時傾斜、按 index 石頭會轉 —— 玩家看得到這一刀從哪切。
+- **踩過的坑**:一開始把翻面也套到 dop 桿上,冠部模式桿子會插進石頭裡。記住:**桿子不翻,只有石頭翻**。
+
+### 2.3 盲切
+按住下壓鈕時畫面遮蔽(看不到切到哪),深度條隨按住時間長,鬆開才套用切割並揭曉。`MAX_DEPTH`/`DEPTH_RATE` 控制壓深速度。
+
+### 2.4 反覆踩到的 JS 雷:TDZ(暫時死區)
+`let state=null;` 宣告在腳本中段。**任何在它之前就被呼叫、且讀取 `state` 的函式都會整支腳本報錯**(然後選石卡都生不出來,畫面卡在標題)。
+→ 教訓:不要在 `let state` 宣告之前呼叫 `updateNavCam()` 之類會碰 `state` 的東西。已用靜態初始化避開。
+
+### 2.5 深度的兩套語意(圖紙模式的核心,別混用)
+- **自由模式** `doCut(depth)`:深度相對「當前最高點」(`d = dmax − depth`),每切一刀基準就變。純手感。
+- **圖紙模式** `cutAtPlane(n, d)`:d 是**石頭局部座標的絕對平面距離**(真機 mast height 的類比)。
+  同 tier 八刀用同一個 d → 天然完美對稱;同參數重切 = 幾何 no-op(零損耗,已驗證)。
+  深度止停(`state.depthStopOn/depthStopV`,單位 %R)壓到 `pressLimit` 會自動停住,鬆手切在**精確的目標平面**(不是時間換算值);提早鬆手 = 走自由模式淺切、不勾銷。
+- 全部止停邏輯 gate 在 `depthStopActive()`,自由模式路徑一行沒動。
+
+### 2.6 圖紙資料的寶石學陷阱(踩過)
+- **halves 比 mains 陡**:SRB 下腰 42° > 亭主 40.75°、上腰 40° > 冠主 34.5°。陡的刻面才會只切腰圍附近;
+  反過來設(主刻面比 halves 陡)會讓 halves **整層切不到東西**或吃掉底尖。
+- **index 集合必須對齒 96 鏡像對稱**:冠部翻面會鏡像方位(t→96−t),非對稱集合會冠亭對不上。
+- 桌面(角度 0)自旋不影響法線 → `indices:[96], indexFree:true`。
+- d 值(×R)校準過:oct8 P1=0.735(底尖剛好收攏在 −1.04R,預成形底蓋 −1.05R 被吃掉);SRB 六層見 `DIAGRAMS`。
+
+---
+
+## 3. 目前實作了什麼(可玩的核心迴圈)
+
+- [x] 7 晶系選擇 → 對應凸多面體原石(八面體/六角雙錐柱/方柱/三角柱/菱形柱/斜柱/扁板)+ 隨機克拉(25–40ct)
+- [x] **傾斜切割機**:角度滑桿(0–90°)石頭即時傾斜;96 齒 index 自旋
+- [x] **盲切**:按住下壓遮蔽 + 深度條,鬆開揭曉,不可 Undo
+- [x] 三段 lap(粗磨/細磨/拋光)材質從霧面→鏡面
+- [x] 翻面切冠部/亭部(桿不翻、石頭翻)
+- [x] **✂ 預成形**:一鍵把細長晶柱裁成矮胖粗胚
+- [x] 報廢換石、克拉累計、殘骸列表
+- [x] **導覽器(top view)**:沿石頭軸看,即時對稱性分析(算切面法線方位的 n 折偏差)
+- [x] **🧭 方位尺(羅盤)**:可開關,度數環 + 金針(指當前 index 方位)+ 折數對稱位青點
+- [x] 折數快捷(8/16/4/6 折),每按跳「下一個」對稱齒位 + 高亮
+- [x] index 小錶盤指針 + 方位角度數字
+- [x] **研磨台顯示模式**:實體 / 線框 / 隱藏(擋視線時切掉)
+- [x] **教學卡**:左上❔鈕,進切割畫面第一次自動跳一次
+- [x] 操作台可收合、移到右下角
+- [x] 中二結算卡:評級/成品率/估價/毒舌評語(本地啟發式,非真 AI)
+- [x] **📜 切割圖紙模式**(2026-07):選石畫面選圖紙(`#diagramRow`)→「✂ 圖紙預成形」裁成已知半徑 R 的 24 角柱標準粗胚(腰圍=y0,24 角柱側面就是腰稜,不用切 girdle tier)→ 左側指令表面板(`#diagramPanel`)逐 tier 施工。內建兩份:**初陽八角**(教學 17 面)、**SRB 57**(標準圓明亮式)。已用 `#dev` 工具驗證兩份圖紙 100% 命中(法線偏差 0°)
+- [x] **深度止停(mast height)**:操作台新滑桿+開關(單位 %R),壓到止停自動停住、鬆手切在精確平面;同位重切零損耗
+- [x] **點 tier 列自動帶入**角度+深度+翻面;index 與下壓仍手動(真機自動化 vs 師傅手工的分界)
+- [x] **勾銷與防呆**:止停切割匹配 tier(側+角度±0.5°+深度±0.5%R)且齒位在表內才打勾;錯齒照切但警告「這刀白切了」
+- [x] **⚡ 魔法陣列快切**:一鍵切完當前 tier 剩餘對稱位(逐刀 `cutAtPlane`,最後才重建 mesh)
+- [x] **羅盤目標齒位**:金環=目標、填色=已完成、粗環=離當前 index 最近的下一刀;圖紙模式自動開方位尺
+- [x] **圖紙結算分支**:完成度 50 + 幾何準確度 30(`auditDiagram` 掃切面法線+平面距離對表)+ 成品率 20
+- [x] **#dev 校準工具**:URL 加 `#dev` → console 的 `__diag.run('oct8'|'srb57')` 一鍵照圖切完、`__diag.dump()` 傾印每個切面的角度/方位/d(%R)
+- [x] **UI 熱點重排**(2026-07 第三輪):操作台瘦身兩欄+不 hover 自動淡出(按壓中 `.pressing` 不淡);**下壓鈕上方「下一刀」資訊帶**(`#nextCutBar`,tier+角度+深度+下一齒,陣列快切鈕也搬到這);UI 整體提亮(`--dim`/面板不透明度/金紫邊);石頭+dop 視覺下移貼盤(`STONE_Y_OFF=-0.42`,切割數學不動,導覽器相機已補償)
+- [x] **標題演出**:機臂工作姿勢壓盤(armBase=0)→點擊進入抬臂緩動到 `PARK_ANGLE`;遊戲 dop 標題時隱藏;標題字逐字放大進場(`.tsChar`)
+- [x] **鏟寶石結算 + localStorage 儲存 + 蒐集頁**(2026-07 第三輪,分鏡=用戶手繪):
+  - 每顆石頭在提交/報廢時用 `captureStoneThumb`(shotR 離屏渲染 96px JPEG ~3KB)拍縮圖入盤;結算卡兩欄:左=鏟子 SVG+縮圖彈跳撒入(`pourIn`),右=hero 主角石實時 3D 旋轉(`startHero`,MeshPhysicalMaterial+自產 envMap 亮晶晶)+原數據/鑑定
+  - `Vault`(key `gemcraft.vault.v1`):一爐=一盤(session.vid/date),同 uid 重提交=覆蓋;上限 600 顆,超額砍最舊非⭐;無痕/擋儲存靜默降級
+  - 蒐集頁(`#galleryScreen`,選石畫面/結算 foot 進入):一盤一卡按日期,點石頭開詳情(參數+⭐最滿意,⭐石在盤中放大)
+- [x] **機台模型導入 + 標題畫面**(2026-07):`machine_model/` 的切割機 GLB 以 **base64 內嵌**在 HTML(`window.MACHINE_GLB_B64` 那行,~1.1MB,**別手改**,重生成用 `machine_model/inject_glb.ps1`)。流程變成:標題畫面(定鏡看機台,機件全動:lap 轉/魔法陣呼吸閃爍/水滴循環/分度輪慢轉/機臂呼吸)→ 點擊 → 選晶系+圖紙 → 切割介面。切割介面裡機台取代舊簡易研磨台(`lapGroup`/`floor` 退役但保留當 fallback),**石頭/dop 仍是遊戲原本那套會動的**(手感核心不動),機臂抬起待命(`PARK_ANGLE`);轉 index 時機台 96 齒分度輪會跟著跳齒。GLTFLoader 從 jsdelivr CDN 載;GLB 載入失敗自動退回舊簡易研磨台,遊戲照玩。
+
+---
+
+## 4. 待確認 / 已知小問題
+
+- **方位尺金針的轉向與零點**：直接用 index 角度畫的,跟 3D 石頭視覺旋轉方向**可能左右相反或差一個 offset**。需實際比對。要修的話改 `updateCompassNeedle(deg)` 的 deg 正負或加常數;`buildCompass()` 是度數環,`updateCompassFold()` 是青點。**羅盤目標齒位(`updateCompassTargets`)刻意用同一套 `(t%96)*3.75` 慣例**,就算整體鏡像,金環跟金針永遠相對一致——要校正就一起改。
+- `clipSolid` / `stitchLoop` 的極端切法破面風險(見 2.1)。SRB 57 面 + 24 腰稜(81 面)壓測通過,沒破面。
+- 結算估價/評級公式是隨手抓的(`showResult()` 裡),數值平衡沒調過。圖紙模式成品率天生偏低(預成形吃掉很多料,約 10–15%),評語 <15% 那句會常駐,要嫌煩就調門檻。
+- 圖紙模式的深度止停滑桿玩家可以手動亂調(離開表定值),切了照樣不勾銷——是特性不是 bug(機器不會救你),但沒有明確提示為什麼沒打勾。
+- `preformDiagram()` 假設原石對 y=0 上下大致對稱(現有 7 個 builder 都滿足);之後若加不對稱原石要回頭看腰圍定位(`c=0.25R` 那段)。
+- **儲存只在 localStorage**:換電腦/換瀏覽器/清快取就消失;蒐集頁只存縮圖+參數,無法重建 3D 模型(詳情頁有註明)。要跨機同步得等匯出/匯入功能。
+- **PMREM envMap 綁 renderer**(r128):`makeEnvTexture(renderer)` 與 `makeEnvTexture(shotR)` 各自產,不能共用,刪掉 shotR 那份 hero/縮圖會變黑。
+
+---
+
+## 5. 接下來想加的(原規格有、還沒做)
+
+優先級是用戶醒來再定,以下是池子:
+
+- ~~切割圖紙 / 目標範本~~ **已做**(見第 3 節)。**擴充圖紙庫**還在池子裡:資料來源 `gemologyproject.com/wiki/index.php?title=Faceting_Designs`,但注意 wiki 純文字**沒有**角度表,實際數據在各設計頁的 PDF / GemCAD(.gem)下載檔裡 → 新圖紙要手工轉錄成 `DIAGRAMS` 格式再用 `#dev` 校準 d 值(流程見 2.6 與 `__diag`)。授權注意:部分作者(如 Surgical Precision Gems)有明確使用限制,轉錄前看各頁授權。
+- ~~魔法陣列快切~~ **已做**(`#arrayCutBtn`)。GemCutter 的 mirror split/offset 進階模式還沒做,要做花式切割再說。
+- **附魔系統**:指定石種名稱 + 處理方式(加熱/輻照/充填/擴散/鍍膜),並用附魔當「清除 dop 蠟痕、恢復透明度」的敘事理由。
+- **真 AI 鑑定**:目前是本地毒舌產生器。要接真 Claude API 得處理 key + CORS(純前端檔案做不到,需要中介)。
+- **Minecraft 第一人稱選石手**:選石畫面目前是純卡片,沒有持 dop 的第一人稱手。
+- **多種 index 齒數**:目前只支援 **96 齒**。GemCutter 用 **80 齒** gear,有些花式切割要 80 齒才能做 **5 折對稱**(96 不整除 5)。後期可考慮讓玩家選齒數(96/80/…),`setIndex`/折數計算要跟著改成參數化齒數。
+- **音效**:研磨聲、拋光聲、完成音。
+- **石頭質感**:用戶提過「不夠像寶石」的方向還沒深做(目前靠彩色點光的高光,沒有環境反射 envMap、沒有透射 transmission)。拋光階段可考慮 `MeshPhysicalMaterial` + 程序生成 envMap。
+- ~~研磨機模型導入~~ **已導入**(見第 3 節)。`machine_model/` 資產:`gem_faceting_machine.blend`(含魔法陣閃爍動畫 fr1-250)、`.glb`、`build_machine.py`(全程序化,改參數重跑 25 秒重生一台)、`inject_glb.ps1`(重生後把 GLB 重新 base64 注入 gemcraft.html)、三張 render。
+  - 模型更新流程:改 `build_machine.py` → `blender -b --factory-startup -P build_machine.py` → `inject_glb.ps1` → Ctrl+R。
+  - 座標換算:Blender (x,y,z) → glTF (x,z,−y);模型 lap r=0.125m → 遊戲 lap r=2.6 → 縮放 ×20.8,root 位移 (2.08,−3.762,0)。
+  - 建模心得:Blender 5.1 headless 可全自動;燈光瓦數按「燈到物距離平方」縮(0.5m 內桌面景 10W 級就夠,100W 把黑鐵洗成灰);色彩轉換 Khronos PBR Neutral 比 AgX 接近 Three.js;5.1 動畫是 slotted actions(fcurve 在 `action.layers[0].strips[0].channelbag(slot)`)。
+  - **下一階段候選:完全綁定**——石頭長在機臂上、quill 傾角=角度滑桿、分度輪=index,整個視覺 paradigm 換成真機視角。工程大,會動到 2.2 的手感核心,要做先開分支檔備份。
+
+---
+
+## 6. 程式地圖(在 gemcraft.html 裡找東西)
+
+| 想改什麼 | 找這個 |
+|---|---|
+| 晶系定義、原石形狀 | `SYSTEMS` 陣列、`buildOctahedron`/`buildPrism`/`buildBox`/`buildTriclinic` |
+| 切割數學 | `clipSolid`、`cutAtPlane`(絕對平面)、`doCut`(相對深度)、`preform` |
+| **圖紙資料(加新圖紙改這)** | `DIAGRAMS` 陣列(格式與陷阱見 2.6) |
+| **圖紙預成形 / 標準粗胚 R** | `preformDiagram`(24 角柱、腰圍 y=0、`state.diagram.R`) |
+| **深度止停** | `depthStopActive`/`depthStopD`/`updateDepthStopUI`、`startPress` 的 `pressLimit`、`animate` 的 clamp |
+| **指令表面板 / tier 帶入 / 勾銷** | `renderDiagramPanel`、`activateTier`、`recordDiagramCut`、`flashWarn` |
+| **陣列快切** | `#arrayCutBtn` 的 onclick |
+| **圖紙結算稽核** | `auditDiagram`、`showResult` 的 `dg` 分支 |
+| **#dev 校準工具** | 檔尾 `location.hash.includes('dev')` 區塊(`__diag.run`/`__diag.dump`) |
+| 傾斜/自旋/翻面 | `rigQuaternion`、`stoneQuaternion`、`expectedNormal`、`setCrown`、`updateNavCam` |
+| 石頭外觀/材質/lap 階段 | `LAPS`、`rebuildStone`、`buildGeometry` |
+| 盲切手感 | `startPress`/`endPress`、`MAX_DEPTH`、`DEPTH_RATE`、`animate` 裡的深度條 |
+| index / 折數 / 錶盤 | `setIndex`、`.presetRow` 的 onclick、`setActiveFold` |
+| 方位尺羅盤 | `buildCompass`、`updateCompassNeedle`、`updateCompassFold`、`updateCompassTargets`(金環) |
+| 導覽器相機 | `topCam`、`updateNavCam` |
+| 結算 / 評分 / 估價 / 毒舌 | `showResult`、`GEM_NAMES` |
+| 教學卡 | HTML `#tutorial`、`helpBtn`/`tutClose` |
+| 對稱性評分 | `updateSymmetry` |
+| **機台模型載入/換裝/動態** | `loadMachine`、`setupMachine`(lapSpin/quillPark/gearSpin 分組)、`tickMachine`、`PARK_ANGLE` |
+| **氛圍(教堂環境/霧氣/光柱)** | `makeEnvScene`/`makeEnvTexture`(彩窗 envMap——**金屬材質全靠它亮**,別刪)、`fxGroup`/`tickFx`(乾冰霧+god rays)、CSS `#vignette`、`scene.fog` |
+| **下一刀資訊帶** | `#nextCutBar`、`updateNextCutBar`、`nextTargetIndex`(與羅盤粗環共用) |
+| **縮圖擷取 / hero 旋轉** | `shotR`、`ensureShotScene`、`captureStoneThumb`、`startHero`/`stopHero` |
+| **儲存 Vault** | `Vault`(load/save/upsert/toggleFav/trim)、`stoneRecordFromState`、`genId`/`todayKey` |
+| **鏟寶石結算** | `scoopSVG`、`stonePileHTML`(id hash 定位)、`renderResultScoop`、CSS `pourIn` |
+| **蒐集頁 / 石頭詳情** | `openGallery`/`renderGallery`/`openStoneDetail`、`#galleryScreen`/`#stoneDetail` |
+| **標題演出** | `.tsChar` 逐字動畫、`armBase`/`armCur`(工作姿勢↔抬臂) |
+| **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
+| **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |
+
+另:`.claude/launch.json` 有一組 `gemcraft` 設定(`npx http-server -p 8123`),給 Claude Code 的 preview 工具起本地伺服器自動驗證用;玩家照樣雙擊 HTML 就好。
+
+---
+
+## 7. 用戶背景備忘(影響怎麼跟他溝通)
+
+- **程式小白**,但有寶石礦物學、金工、Rhino NURBS 底,3D 幾何概念講得通。
+- 描述力他自評低 → 給選項勾(A/B/C)比要他開放描述有效;他會直接在截圖上標註。
+- 偏好:繁中、結論先講、不鋪墊、不評論進度、不估時間。
+- 創作脈絡:MOGA 世界觀(硬 SF + 寶石/AI 角色),這遊戲的「中二魔法附魔」要冷峻精準,別煽情。
+
+---
+
+## 8. 參考資源
+
+- **Faceting Designs 圖紙庫**(切割圖紙功能的資料來源):
+  `https://www.gemologyproject.com/wiki/index.php?title=Faceting_Designs`
+  → 大量現成 faceting diagram,格式 = 每行一 tier:角度 + index 位置列表。
+- **GemCutter**(Blender 插件,作者 Máté Djuroska):
+  核心數學跟我們一樣(angle × index × depth = facet),但他做精確建模、我們做互動體驗。
+  可參考的設計:Symmetry + Mirror 模式(symmetry 數 / mirror split / mirror offset)、80 齒 index gear。
+  他的參考來源也是上面的 gemologyproject。
+- 原始概念規格:`isekai_gemcraft_claude.md`(v1.0,當願景參考,不要改)。
+- Three.js r128 文件(切割渲染用)。
