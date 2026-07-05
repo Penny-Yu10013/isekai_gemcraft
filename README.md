@@ -22,5 +22,10 @@
 
 雙擊 `gemcraft.html` 即可玩。改完 Ctrl+R。開發交接文件見 `CLAUDE.md`。
 
+## 素材出處
+
+- 切工形狀 icon 取自 [JewelCraft](https://github.com/mrachinskiy/jewelcraft)(Mikhail Rachinskiy, GPL-3.0)
+- 音效全為 WebAudio 程序化生成,無外部音檔
+
 ---
 🤖 與 [Claude Code](https://claude.com/claude-code) 協作開發

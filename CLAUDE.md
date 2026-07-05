@@ -165,6 +165,9 @@
 | **鏟寶石結算** | `scoopSVG`、`stonePileHTML`(id hash 定位)、`renderResultScoop`、CSS `pourIn` |
 | **蒐集頁 / 石頭詳情** | `openGallery`/`renderGallery`/`openStoneDetail`、`#galleryScreen`/`#stoneDetail` |
 | **標題演出** | `.tsChar` 逐字動畫、`armBase`/`armCur`(工作姿勢↔抬臂) |
+| **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀;mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
+| **附魔轉色** | `TINTS` 陣列、`#tintBtn`/`#tintRow`(leftTools 下),reset dot=回原石色 |
+| **圖紙卡 icon** | `.dcIcon` base64(取自 JewelCraft GPL-3.0,octagon/round),`.recBadge` 推薦角標;重注入用 PS Replace `__ICON_OCT__`/`__ICON_ROUND__` 佔位(已注入,佔位符已不在) |
 | **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
 | **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |
 
