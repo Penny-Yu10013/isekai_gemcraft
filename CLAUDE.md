@@ -103,13 +103,15 @@
   - **左欄不再互蓋**:`#diagramPanel` 原本絕對定位 `top:190px`,圖紙模式會蓋住第三顆 🎨 附魔轉色鈕(用戶:「這個按鈕只有我會知道而已」);現在整個收進 `#leftTools` 的 flex column 正常排版流(HTML 也搬進去了),`#tintRow` 調色盤改成按鈕正下方原地展開(6×2 grid,不再是浮在 3D 畫面上的絕對定位 popover),開合會把指令表往下推,三者永不重疊。`#diagramPanel` max-height 56vh→48vh 補償排版流起點變低。
   - **淺色石看得到刻面**:白鑽在切割視圖整坨死白、刻面邊界讀不出來 → `rebuildStone` 對亮度 lum>0.85 的石色(白鑽 0xdce8f2)疊一層 `EdgesGeometry` 深色稜線(石色×0.38)+ 面色×0.9 微降亮 + 兩個面材質開 polygonOffset 防線面 z-fighting;深色石完全不動。稜線是 stoneMesh 的 child,跟著傾斜/自旋,導覽器 top view 也看得到;rebuild 時會 dispose 舊稜線。已用 `#dev` oct8 全程切完驗證 17/17 命中、偏差 0°,切割數學不受影響。
 - [x] **機台模型導入 + 標題畫面**(2026-07):`machine_model/` 的切割機 GLB 以 **base64 內嵌**在 HTML(`window.MACHINE_GLB_B64` 那行,~1.1MB,**別手改**,重生成用 `machine_model/inject_glb.ps1`)。流程變成:標題畫面(定鏡看機台,機件全動:lap 轉/魔法陣呼吸閃爍/水滴循環/分度輪慢轉/機臂呼吸)→ 點擊 → 選晶系+圖紙 → 切割介面。切割介面裡機台取代舊簡易研磨台(`lapGroup`/`floor` 退役但保留當 fallback),**石頭/dop 仍是遊戲原本那套會動的**(手感核心不動),機臂抬起待命(`PARK_ANGLE`);轉 index 時機台 96 齒分度輪會跟著跳齒。GLTFLoader 從 jsdelivr CDN 載;GLB 載入失敗自動退回舊簡易研磨台,遊戲照玩。
+- [x] **魔法快切導覽(coachmark)**(2026-07 第五輪):圖紙模式第一次選石自動跳,非阻塞式聚光燈提示(`#coachMark`,dim 背景+金框+文字泡泡),**跟著玩家實際動作前進**而非手動翻頁:①點 `#preformBtn`(預成形)→②點 `#dgTiers` 任一列(照順序走)→③按住 `#pressBtn` 到「🛑已達深度止停」才放開(用戶實測回報卡在這步——原因是誤以為點一下就好,沒發現深度止停要「按住等它自己停」,已在文案明講)→④點 `#nextCutBar` 的「⚡魔法陣列快切」。四步分別掛在 `preformDiagram`/`activateTier`/`recordDiagramCut`/`arrayCutBtn.onclick` 尾端推進,隨時可按泡泡上「✕略過導覽」跳出;`coachShown` 是 session 變數(跟 `tutShown` 同慣例,重整頁面會再跳一次)。收合操作台/視窗縮放都有掛 `coachPosition()` 防跑位。
+- [x] **亮色玻璃主題(Apple 風 liquid-glass)+ 明暗切換**(2026-07 第六輪):`#themeBtn`(🌙/☀️,`sndBtn` 右邊)一鍵切,存 `localStorage gemcraft.theme`,預設暗色。**只換 UI 外殼**,3D 切割場景(教堂光/霧/暗角/導覽器小視窗/hero 旋轉視窗)刻意維持原樣不動(用戶裁定範圍)。實作方式:整包疊在 `html[data-theme="light"]` 選擇器裡,一行都沒改原本的暗色規則本身——靠選擇器優先度覆蓋,零迴歸風險(已截圖比對確認暗色主題像素級不變)。分兩層:①核心變數(`--panel/--line/--accent/--accent2/--text/--dim/--warn/--gold`)重新賦值,套用到所有原本就用 `var()` 的規則(按鈕文字/邊框/hint 等大部分自動吃到);②約 20 條寫死 hex 顏色的規則(sysCard/diagCard/tierRow/idxChip/結算卡/教學卡/蒐集頁等)逐一加 `html[data-theme="light"] 選擇器{}` 明版覆蓋。**踩過的坑**:沒包在 `.panel`(沒有自己 `backdrop-filter`)、直接浮在 3D 場景上的裸 `button`(左側 `#leftTools` 三顆、`#tintRow`、`#coachBubble`)一開始只換了半透明白底沒加 blur,亮背景會把文字洗到快看不見——後來在 `html[data-theme="light"] button` 統一補 `backdrop-filter:blur(14px) saturate(160%)` 才解決;已包在 `.panel` 裡的子元素(console 內按鈕、tierRow 在 diagramPanel 裡)不需要自己 blur,吃父層的就夠。大面板(`.panel`/結算卡/蒐集頁/教學遮罩)用 `blur(22px) saturate(180%)`。
 
 ---
 
 ## 4. 待確認 / 已知小問題
 
 - **方位尺金針的轉向與零點**：直接用 index 角度畫的,跟 3D 石頭視覺旋轉方向**可能左右相反或差一個 offset**。需實際比對。要修的話改 `updateCompassNeedle(deg)` 的 deg 正負或加常數;`buildCompass()` 是度數環,`updateCompassFold()` 是青點。**羅盤目標齒位(`updateCompassTargets`)刻意用同一套 `(t%96)*3.75` 慣例**,就算整體鏡像,金環跟金針永遠相對一致——要校正就一起改。
-- `clipSolid` / `stitchLoop` 的極端切法破面風險(見 2.1)。SRB 57 面 + 24 腰稜(81 面)壓測通過,沒破面。
+- `clipSolid` / `stitchLoop` 的極端切法破面風險(見 2.1)。SRB 57 面 + 24 腰稜(81 面)壓測通過,沒破面。**圖紙模式風險趨近於零**(角度/深度/index 都鎖在表定值,等於全跑過壓測);**自由切割沒有這層保護**——玩家可以用任意角度+任意深度連續下壓,沒人校過那個組合空間,是「破圖」回報最可能的來源(2026-07 用戶朋友玩舊版時發生)。目前只做了 UX 層防呆:選石畫面自由切割卡加「🔥匠人精神」警示角標(`.hardBadge`,見選石畫面 `#diagramRow` 第一張卡)區分於圖紙的「⭐推薦入門」,提示新手不要預設選它;**幾何層本身沒加防呆**,真的極端切法(例如同角度貼著切到只剩極薄一層)理論上仍可能讓 `stitchLoop` 縫不出封閉面。若之後再收到破圖回報,先問清楚是「幾何真的破洞/面缺角」還是「只是切得對稱很差、形狀很醜」——只有前者才是這裡要查的 bug。
 - 結算估價/評級公式是隨手抓的(`showResult()` 裡),數值平衡沒調過。圖紙模式成品率天生偏低(預成形吃掉很多料,約 10–15%),評語 <15% 那句會常駐,要嫌煩就調門檻。
 - 圖紙模式的深度止停滑桿玩家可以手動亂調(離開表定值),切了照樣不勾銷——是特性不是 bug(機器不會救你),但沒有明確提示為什麼沒打勾。
 - `preformDiagram()` 假設原石對 y=0 上下大致對稱(現有 8 個 builder 都滿足);之後若加不對稱原石要回頭看腰圍定位(`c=0.25R` 那段)。
@@ -166,6 +168,8 @@
 | 導覽器相機 | `topCam`、`updateNavCam` |
 | 結算 / 評分 / 估價 / 毒舌 | `showResult`、`GEM_NAMES` |
 | 教學卡 | HTML `#tutorial`、`helpBtn`/`tutClose` |
+| **魔法快切導覽(coachmark)** | `COACH_STEPS`、`coachShow`/`coachHide`/`coachPosition`、HTML `#coachMark` |
+| **亮色玻璃主題 / 明暗切換** | CSS `html[data-theme="light"]` 區塊(疊加,不改暗色原規則)、JS `applyTheme`、HTML `#themeBtn` |
 | 對稱性評分 | `updateSymmetry` |
 | **機台模型載入/換裝/動態** | `loadMachine`、`setupMachine`(lapSpin/quillPark/gearSpin 分組)、`tickMachine`、`PARK_ANGLE` |
 | **氛圍(教堂環境/霧氣/光柱)** | `makeEnvScene`/`makeEnvTexture`(彩窗 envMap——**金屬材質全靠它亮**,別刪)、`fxGroup`/`tickFx`(乾冰霧+god rays)、CSS `#vignette`、`scene.fog` |
@@ -178,7 +182,8 @@
 | **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀;mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
 | **附魔轉色** | `TINTS` 陣列、`#tintBtn`/`#tintRow`(leftTools 內原地展開,in-flow 非浮動),reset dot=回原石色 |
 | **淺色石稜線描邊** | `rebuildStone` 的 `lum>0.85` 分支(EdgesGeometry+polygonOffset) |
-| **圖紙卡 icon** | `.dcIcon` base64(取自 JewelCraft GPL-3.0,octagon/round),`.recBadge` 推薦角標;重注入用 PS Replace `__ICON_OCT__`/`__ICON_ROUND__` 佔位(已注入,佔位符已不在) |
+| **自由切割警示角標** | `.hardBadge`(套 `.recBadge` 定位,紅橙漸層),選石畫面自由切割卡上的「🔥匠人精神」,對比圖紙卡的「⭐推薦入門」 |
+| **圖紙卡 icon** | `.dcIcon` base64,來源 `瑰藝局\jewelcraft\assets\gems\`(JewelCraft GPL-3.0,`light/`=白線稿給暗色主題、`dark/`=黑線稿,亮色主題靠 CSS `filter:invert(1)` 從白轉黑,不用另外嵌 dark 版)。五份圖紙全配到位:oct8=octagon、srb57=port97=round、asscher49=asscher、tri16=trillion。`.recBadge` 推薦角標。要加新圖紙 icon 就去該資料夾選同名或形狀最近的 `light/*.png` 轉 base64 塞進對應 `<img class="dcIcon">` |
 | **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
 | **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |
 
