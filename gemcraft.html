@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>異世界魔法石工坊 — Isekai Gemcraft</title>
 <style>
   :root{
@@ -430,6 +430,102 @@
     background:rgba(255,255,255,.7); border-color:rgba(140,120,200,.35);
     box-shadow:0 20px 60px rgba(120,90,200,.2); }
   html[data-theme="light"] .card .head{ background:rgba(255,255,255,.3); }
+
+  /* ============================================================
+     手機版(疊加,不動桌面規則,同亮色主題的零迴歸策略):
+     觸控通用 + 直向窄螢幕重排 + 橫向矮螢幕微縮
+     ============================================================ */
+  /* 觸控通用(桌面無感) */
+  #app canvas{touch-action:none;}                /* 單指轉視角/雙指縮放交給遊戲,不給瀏覽器 */
+  #pressBtn{touch-action:none; -webkit-user-select:none;}
+  button, input[type=range]{touch-action:manipulation;} /* 殺雙擊縮放與 300ms 延遲 */
+  body{-webkit-tap-highlight-color:transparent; overscroll-behavior:none;}
+  @media (hover:none){
+    /* 觸控裝置沒有 hover,操作台淡出邏輯改常駐微透明(收合鈕仍可整個藏掉) */
+    #console:not(:hover){opacity:.92;}
+  }
+
+  /* 直向窄螢幕(手機直拿) */
+  @media (max-width:720px){
+    /* 頂欄讓出右側導覽器空間 */
+    #topbar{top:8px; left:8px; right:160px; gap:6px;}
+    #topbar .stoneInfo{padding:6px 10px; gap:8px 14px; flex-wrap:wrap;}
+    #topbar .stoneInfo .k{font-size:9px;}
+    #topbar .stoneInfo .v{font-size:13px;}
+    #phaseTag{padding:4px 8px; font-size:11px;}
+    /* 導覽器縮小 */
+    #topviewWrap{top:8px; right:8px; width:146px; padding:8px;}
+    #topviewCanvas,.navStage,#compass{width:126px; height:126px;}
+    #topviewWrap .label{font-size:10px; margin-bottom:4px;}
+    #compassToggle{font-size:10px; padding:4px 6px;}
+    /* 左欄 */
+    #leftTools{top:96px; left:8px; gap:6px;}
+    #leftTools button{font-size:11px; padding:6px 8px;}
+    #diagramPanel{width:46vw; max-height:26vh;}
+    .tierRow{padding:6px 8px;}
+    .tierHead{font-size:11px;} .tierHead b{font-size:12px;}
+    .idxChip{font-size:10px; padding:1px 4px;}
+    .tintDot{width:20px; height:20px;}
+    #scrapTray{display:none;}
+    /* 操作台:滿版貼底,左邊留音效/主題鈕的走道 */
+    #console{left:56px; right:8px; bottom:8px; width:auto;
+      padding:8px 10px 10px; gap:6px; max-height:56vh; overflow-y:auto;}
+    .ctrlRow{gap:6px 10px;}
+    .ctrlGroup label{font-size:10px;}
+    .ctrlGroup label b{font-size:12px;}
+    .indexRow button{padding:5px 8px;}
+    .indexRow .idxval{min-width:34px; font-size:13px;}
+    .idxDial{width:34px; height:34px;} .idxDial i{height:14px;}
+    .presetRow button{padding:4px 7px; font-size:11px;}
+    .lapBtn{padding:6px; font-size:11px;}
+    #nextCutBar{font-size:11px; gap:6px; padding:6px 8px;}
+    #nextCutBar .ncIdx{font-size:13px;}
+    #pressBtn{padding:11px; font-size:14px;}
+    .actionRow{flex-wrap:wrap;}
+    .actionRow button{font-size:11px; padding:6px 8px; flex:1 1 40%;}
+    #collapseBtn{top:-12px; right:8px;}
+    .hint{font-size:10px;}
+    #expandBtn{right:8px; bottom:8px;}
+    /* 音效/主題鈕改左下直排(操作台左走道);z 降到彈窗(結算/蒐集/教學)之下不擋內容 */
+    #sndBtn{left:8px; bottom:8px; width:40px; height:40px; z-index:30;}
+    #themeBtn{left:8px; bottom:56px; width:40px; height:40px; z-index:30;}
+    /* 標題/選石畫面 */
+    .tsTitle{font-size:30px;}
+    #titleScreen{padding-bottom:12vh;}
+    #selectScreen{justify-content:flex-start; overflow-y:auto; padding:24px 12px 32px; gap:14px;}
+    #selectScreen .title h1{font-size:22px;}
+    .systemGrid{grid-template-columns:repeat(2,1fr); gap:8px; width:100%; max-width:430px;}
+    .sysCard{width:auto; padding:10px;}
+    #diagramRow{gap:8px; width:100%; max-width:430px;}
+    .diagCard{width:100%; padding:8px 12px; font-size:13px;}
+    .diagCard small{font-size:10px;}
+    /* 教學卡/結算卡/蒐集頁:可捲動、不超框 */
+    .tutCard{padding:18px 20px; max-height:88vh; overflow-y:auto;}
+    .tutCard li{font-size:13px;}
+    #resultScreen{align-items:flex-start; overflow-y:auto; padding:14px 0;}
+    .card{width:min(460px,94vw);}
+    .rMain{flex-direction:column; gap:10px;}
+    #rScoopStage{max-height:250px;}
+    #rHeroStage{width:190px; height:190px;}
+    .card .head{padding:12px 16px;} .card .body{padding:12px 16px;}
+    .card .foot{padding:12px 16px; flex-wrap:wrap;}
+    #galleryScreen{padding:12px;}
+    #stoneDetail .card{width:min(360px,94vw);}
+    #sdThumb{width:200px; height:200px;}
+    #coachBubble{width:min(270px,86vw);}
+  }
+
+  /* 橫向矮螢幕(手機橫拿):只縮尺寸不重排 */
+  @media (min-width:721px) and (max-height:540px){
+    #topviewWrap{width:170px; padding:8px;}
+    #topviewCanvas,.navStage,#compass{width:150px; height:150px;}
+    #console{max-height:76vh; overflow-y:auto; padding:8px 12px; gap:6px;}
+    #leftTools{top:70px; gap:6px;}
+    #leftTools button{font-size:11px; padding:6px 8px;}
+    #diagramPanel{max-height:36vh;}
+    #pressBtn{padding:9px; font-size:14px;}
+    #scrapTray{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -1732,7 +1828,11 @@ function preformDiagram(){
 // ============================================================
 //   相機 / 視角控制（右鍵拖曳 orbit）
 // ============================================================
-let camR=5.5, camTheta=0.5, camPhi=1.1;
+// 觸控裝置偵測(手機/平板):影響預設相機距離、下壓鈕文案、教學字眼
+const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
+// 直向窄螢幕水平視野窄,相機拉遠一點石頭跟機台才進畫面
+function defaultCamR(){ return (innerWidth<720)?7.2:5.5; }
+let camR=defaultCamR(), camTheta=0.5, camPhi=1.1;
 const TARGET=new THREE.Vector3(0,-0.75,0); // 目標偏下 → 石頭往上抬,離開操作台
 const STONE_Y_OFF=-0.42;                    // 石頭+dop 視覺下移貼盤(切割數學不動)
 function updateCam(){
@@ -1757,7 +1857,30 @@ addEventListener('mouseup',()=>dragging=false);
 renderer.domElement.addEventListener('wheel',e=>{
   e.preventDefault(); camR*=(1+Math.sign(e.deltaY)*0.08); camR=Math.max(3,Math.min(11,camR)); updateCam();
 },{passive:false});
-document.getElementById('resetView').onclick=()=>{camR=5.5;camTheta=0.5;camPhi=1.1;updateCam();};
+document.getElementById('resetView').onclick=()=>{camR=defaultCamR();camTheta=0.5;camPhi=1.1;updateCam();};
+
+// ---- 觸控:單指拖曳=轉視角(對應右鍵拖曳),雙指捏合=縮放(對應滾輪) ----
+let pinchD=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){ dragging=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; }
+  else if(e.touches.length===2){ dragging=false;
+    pinchD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+},{passive:false});
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1 && dragging){
+    const t=e.touches[0];
+    camTheta-=(t.clientX-lastX)*0.008; camPhi-=(t.clientY-lastY)*0.008;
+    camPhi=Math.max(0.2,Math.min(2.6,camPhi)); lastX=t.clientX; lastY=t.clientY; updateCam();
+  } else if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if(pinchD>0 && d>0){ camR*=pinchD/d; camR=Math.max(3,Math.min(11,camR)); updateCam(); }
+    pinchD=d;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',e=>{ if(e.touches.length===0){ dragging=false; pinchD=0; } });
+renderer.domElement.addEventListener('touchcancel',()=>{ dragging=false; pinchD=0; });
 
 // 收合 / 展開操作台
 const consoleEl=document.getElementById('console');
@@ -1796,7 +1919,7 @@ let coachShown=false, coachStep=-1;
 const COACH_STEPS=[
   {sel:'#preformBtn', txt:'<b>① 圖紙預成形</b><br>先按這裡,把細長晶柱一鍵裁成標準規格的粗胚,指令表的角度/深度才會準。'},
   {sel:'#dgTiers', txt:'<b>② 照順序走</b><br>指令表由上而下,點一列自動帶入角度+深度止停+翻面。'},
-  {sel:'#pressBtn', txt:'<b>③ 按住,別只點一下</b><br>滑鼠左鍵按住這顆不放,深度條會自己往上爬,爬到「🛑 已達深度止停」才放開——太早放開這刀不算數。'},
+  {sel:'#pressBtn', txt:'<b>③ 按住,別只點一下</b><br>按住這顆不放(滑鼠或手指壓著),深度條會自己往上爬,爬到「🛑 已達深度止停」才放開——太早放開這刀不算數。'},
   {sel:'#nextCutBar', txt:'<b>④ 一鍵速切</b><br>同一列剩下的刀,按「⚡ 魔法陣列快切」一次切完,不用一刀一刀來。'},
 ];
 function coachPosition(){
@@ -1890,7 +2013,7 @@ function endPress(){
   pressBtn.classList.remove('pressing');
   consoleEl.classList.remove('pressing');
   SFX.grindStop();
-  pressBtn.querySelector('span').textContent='按住左鍵下壓切割（鬆開揭曉）';
+  pressBtn.querySelector('span').textContent=PRESS_LABEL;
   blindOverlay.style.display='none';
   depthFill.style.width='0%';
   if(depthStopActive()){
@@ -1900,6 +2023,22 @@ function endPress(){
 }
 pressBtn.addEventListener('mousedown',e=>{e.preventDefault(); startPress();});
 addEventListener('mouseup',()=>{ if(pressing) endPress(); });
+// 觸控版下壓:touchstart 的 preventDefault 同時擋掉合成 mousedown,不會重複觸發
+pressBtn.addEventListener('touchstart',e=>{e.preventDefault(); startPress();},{passive:false});
+addEventListener('touchend',()=>{ if(pressing) endPress(); });
+addEventListener('touchcancel',()=>{ if(pressing) endPress(); });
+pressBtn.addEventListener('contextmenu',e=>e.preventDefault()); // Android 長按選單
+// 觸控裝置的文案(沒有「左鍵」):下壓鈕 + 教學卡的滑鼠字眼
+const PRESS_LABEL=IS_TOUCH?'按住下壓切割（鬆開揭曉）':'按住左鍵下壓切割（鬆開揭曉）';
+pressBtn.querySelector('span').textContent=PRESS_LABEL;
+if(IS_TOUCH){
+  document.querySelectorAll('#tutorial .tip').forEach(el=>{
+    el.innerHTML=el.innerHTML.replace('右鍵拖曳轉視角,滾輪縮放','單指拖曳轉視角,雙指捏合縮放');
+  });
+  document.querySelectorAll('#tutorial li').forEach(el=>{
+    el.innerHTML=el.innerHTML.replace('按住紫色大鈕','按住紫色大鈕(手指壓著)');
+  });
+}
 
 // ============================================================
 //   UI 綁定

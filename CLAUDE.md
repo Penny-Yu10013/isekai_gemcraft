@@ -104,6 +104,13 @@
   - **淺色石看得到刻面**:白鑽在切割視圖整坨死白、刻面邊界讀不出來 → `rebuildStone` 對亮度 lum>0.85 的石色(白鑽 0xdce8f2)疊一層 `EdgesGeometry` 深色稜線(石色×0.38)+ 面色×0.9 微降亮 + 兩個面材質開 polygonOffset 防線面 z-fighting;深色石完全不動。稜線是 stoneMesh 的 child,跟著傾斜/自旋,導覽器 top view 也看得到;rebuild 時會 dispose 舊稜線。已用 `#dev` oct8 全程切完驗證 17/17 命中、偏差 0°,切割數學不受影響。
 - [x] **機台模型導入 + 標題畫面**(2026-07):`machine_model/` 的切割機 GLB 以 **base64 內嵌**在 HTML(`window.MACHINE_GLB_B64` 那行,~1.1MB,**別手改**,重生成用 `machine_model/inject_glb.ps1`)。流程變成:標題畫面(定鏡看機台,機件全動:lap 轉/魔法陣呼吸閃爍/水滴循環/分度輪慢轉/機臂呼吸)→ 點擊 → 選晶系+圖紙 → 切割介面。切割介面裡機台取代舊簡易研磨台(`lapGroup`/`floor` 退役但保留當 fallback),**石頭/dop 仍是遊戲原本那套會動的**(手感核心不動),機臂抬起待命(`PARK_ANGLE`);轉 index 時機台 96 齒分度輪會跟著跳齒。GLTFLoader 從 jsdelivr CDN 載;GLB 載入失敗自動退回舊簡易研磨台,遊戲照玩。
 - [x] **魔法快切導覽(coachmark)**(2026-07 第五輪):圖紙模式第一次選石自動跳,非阻塞式聚光燈提示(`#coachMark`,dim 背景+金框+文字泡泡),**跟著玩家實際動作前進**而非手動翻頁:①點 `#preformBtn`(預成形)→②點 `#dgTiers` 任一列(照順序走)→③按住 `#pressBtn` 到「🛑已達深度止停」才放開(用戶實測回報卡在這步——原因是誤以為點一下就好,沒發現深度止停要「按住等它自己停」,已在文案明講)→④點 `#nextCutBar` 的「⚡魔法陣列快切」。四步分別掛在 `preformDiagram`/`activateTier`/`recordDiagramCut`/`arrayCutBtn.onclick` 尾端推進,隨時可按泡泡上「✕略過導覽」跳出;`coachShown` 是 session 變數(跟 `tutShown` 同慣例,重整頁面會再跳一次)。收合操作台/視窗縮放都有掛 `coachPosition()` 防跑位。
+- [x] **手機版適配(直向優先)**(2026-07 第七輪):同亮色主題的疊加策略——桌面 CSS 一行不動,`<style>` 尾端加觸控通用規則 + `@media (max-width:720px)`(直向重排)+ `@media (min-width:721px) and (max-height:540px)`(橫向微縮)。
+  - **觸控輸入**:canvas 單指拖曳=轉視角、雙指捏合=縮放(對應右鍵拖曳/滾輪;`touch-action:none` 把手勢留給遊戲不給瀏覽器);`#pressBtn` touchstart/touchend 對應盲切按住(touchstart 的 preventDefault 同時擋掉合成 mousedown,不會重複觸發);全域 `touchend/touchcancel` 保底 endPress。
+  - **直向排版**:導覽器縮 146px、指令表 46vw/26vh、操作台滿版貼底(左留 56px 走道給音效/主題鈕直排,兩鈕 z-index 降 30 讓結算/蒐集彈窗蓋過)、選石畫面晶系 2 欄+圖紙卡滿寬直排+整頁可捲動、結算卡 `.rMain` 改直排、`#scrapTray` 隱藏、教學/結算卡可捲動不超框。
+  - **相機補償**:`defaultCamR()` 窄螢幕(<720px)回 7.2、桌面 5.5(直向水平視野窄,拉遠才裝得下機台),`resetView` 同步。
+  - **文案**:`IS_TOUCH`(pointer:coarse)時下壓鈕文案去掉「左鍵」(`PRESS_LABEL`)、教學卡「右鍵拖曳/滾輪」字眼換成觸控版;coachmark ③ 改裝置中性「滑鼠或手指壓著」。觸控裝置 `#console` 的 hover 淡出改常駐 92% 透明度(`@media (hover:none)`)。
+  - **實測**:375×812 全流程(選石→預成形→合成 TouchEvent 壓到深度止停→鬆手勾銷→陣列快切→結算)通過,oct8 17/17 稽核不受影響;桌面(>720px)迴歸無變化;亮色主題×手機版相容。**已知妥協**:手機橫拿(812×375)導覽器與操作台右上角小面積重疊,靠操作台可捲動+微透明堪用——**直向是主設計模式**。
+  - 附帶:`.claude/launch.json` 改 `autoPort`(8123 被別的 session 占走時自動換 port,http-server 吃 PORT 環境變數)。
 - [x] **亮色玻璃主題(Apple 風 liquid-glass)+ 明暗切換**(2026-07 第六輪):`#themeBtn`(🌙/☀️,`sndBtn` 右邊)一鍵切,存 `localStorage gemcraft.theme`,預設暗色。**只換 UI 外殼**,3D 切割場景(教堂光/霧/暗角/導覽器小視窗/hero 旋轉視窗)刻意維持原樣不動(用戶裁定範圍)。實作方式:整包疊在 `html[data-theme="light"]` 選擇器裡,一行都沒改原本的暗色規則本身——靠選擇器優先度覆蓋,零迴歸風險(已截圖比對確認暗色主題像素級不變)。分兩層:①核心變數(`--panel/--line/--accent/--accent2/--text/--dim/--warn/--gold`)重新賦值,套用到所有原本就用 `var()` 的規則(按鈕文字/邊框/hint 等大部分自動吃到);②約 20 條寫死 hex 顏色的規則(sysCard/diagCard/tierRow/idxChip/結算卡/教學卡/蒐集頁等)逐一加 `html[data-theme="light"] 選擇器{}` 明版覆蓋。**踩過的坑**:沒包在 `.panel`(沒有自己 `backdrop-filter`)、直接浮在 3D 場景上的裸 `button`(左側 `#leftTools` 三顆、`#tintRow`、`#coachBubble`)一開始只換了半透明白底沒加 blur,亮背景會把文字洗到快看不見——後來在 `html[data-theme="light"] button` 統一補 `backdrop-filter:blur(14px) saturate(160%)` 才解決;已包在 `.panel` 裡的子元素(console 內按鈕、tierRow 在 diagramPanel 裡)不需要自己 blur,吃父層的就夠。大面板(`.panel`/結算卡/蒐集頁/教學遮罩)用 `blur(22px) saturate(180%)`。
 
 ---
@@ -184,10 +191,11 @@
 | **淺色石稜線描邊** | `rebuildStone` 的 `lum>0.85` 分支(EdgesGeometry+polygonOffset) |
 | **自由切割警示角標** | `.hardBadge`(套 `.recBadge` 定位,紅橙漸層),選石畫面自由切割卡上的「🔥匠人精神」,對比圖紙卡的「⭐推薦入門」 |
 | **圖紙卡 icon** | `.dcIcon` base64,來源 `瑰藝局\jewelcraft\assets\gems\`(JewelCraft GPL-3.0,`light/`=白線稿給暗色主題、`dark/`=黑線稿,亮色主題靠 CSS `filter:invert(1)` 從白轉黑,不用另外嵌 dark 版)。五份圖紙全配到位:oct8=octagon、srb57=port97=round、asscher49=asscher、tri16=trillion。`.recBadge` 推薦角標。要加新圖紙 icon 就去該資料夾選同名或形狀最近的 `light/*.png` 轉 base64 塞進對應 `<img class="dcIcon">` |
+| **手機版/觸控** | CSS 尾端「手機版」區塊(`@media (max-width:720px)` 等,疊加不動桌面規則)、canvas `touchstart/touchmove`(orbit+`pinchD` 捏合)、`pressBtn` touchstart、`IS_TOUCH`/`defaultCamR`/`PRESS_LABEL` |
 | **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
 | **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |
 
-另:`.claude/launch.json` 有一組 `gemcraft` 設定(`npx http-server -p 8123`),給 Claude Code 的 preview 工具起本地伺服器自動驗證用;玩家照樣雙擊 HTML 就好。
+另:`.claude/launch.json` 有一組 `gemcraft` 設定(`npx http-server`,autoPort 自動配 port),給 Claude Code 的 preview 工具起本地伺服器自動驗證用;玩家照樣雙擊 HTML 就好,手機玩家走 GitHub Pages 網址。
 
 ---
 
