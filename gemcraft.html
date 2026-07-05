@@ -141,8 +141,10 @@
     box-shadow:0 2px 8px #0007;}
 
   /* ---- 附魔轉色 / 音效鈕 ---- */
-  #tintRow{display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
-    padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:10px;}
+  #tintRow{position:absolute; left:272px; top:70px; width:156px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+    padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    z-index:5;}
   .tintDot{width:26px; height:26px; border-radius:50%; border:2px solid #ffffff33; cursor:pointer;}
   .tintDot:hover{border-color:#fff; transform:scale(1.12);}
   .tintDot.reset{background:conic-gradient(#c22740,#d98a2b,#ffd479,#2ea860,#2f7fb0,#7a3fb0,#c22740);}
@@ -1533,39 +1535,37 @@ function preformDiagram(){
   }
   R*=0.95;
   R=Math.min(R,(ymax-ymin)/1.6);     // 軸向要塞得下 1.6R 的帶
-  function buildBlank(Rv){
-    const w=cloneSolid(orig);
-    const c=0.25*Rv;                 // 腰圍放原始 y=+0.25R,帶對稱涵蓋赤道
-    for(const v of w.verts){ v[1]-=c; }
-    let s=clipSolid(w,[0,1,0],0.55*Rv);
-    if(s) s=clipSolid(s,[0,-1,0],1.05*Rv);
-    for(let k=0;k<SIDES && s;k++){
-      const a=k/SIDES*Math.PI*2;
-      s=clipSolid(s,[Math.cos(a),0,Math.sin(a)],Rv);
-    }
-    return s;
-  }
-  function girdleInradius(s, Rv){
-    // 取腰圍平面 ±2%R 薄片,量 48 方位最小支撐=腰圍實際內半徑
-    let slab=clipSolid(cloneSolid(s),[0,1,0],0.02*Rv);
-    if(slab) slab=clipSolid(slab,[0,-1,0],0.02*Rv);
-    if(!slab) return Rv;
+  // 迭代:量「腰圍平面」(原始 y=+0.25R)薄片的實際內半徑,短缺就縮 R
+  for(let pass=0; pass<3; pass++){
+    const c=0.25*R;
+    let slab=clipSolid(cloneSolid(orig),[0,1,0], c+0.02*R);
+    if(slab) slab=clipSolid(slab,[0,-1,0], -(c-0.02*R));
+    if(!slab) break;
     let g=1e9;
     for(let k=0;k<48;k++){
       const a=k/48*Math.PI*2;
       g=Math.min(g, maxSupport([Math.cos(a),0,Math.sin(a)], slab));
     }
-    return g;
+    if(g>=R*0.995) break;
+    R=g*0.99;
   }
-  let blank=null;
-  for(let pass=0; pass<3; pass++){
-    blank=buildBlank(R);
-    if(!blank){ console.warn('preformDiagram 失敗'); return; }
-    const g=girdleInradius(blank, R);
-    if(g>=R*0.995) break;            // 腰圍夠寬,收斂
-    R=g*0.99;                        // 縮到腰圍實際內半徑再重做
+  // 直接程序化生出乾淨 24 角柱粗胚(不裁原石=零破面/零毛邊)。
+  // 邊心距=R(側面平面距離=R,d×R 語意不變),腰圍=y0,亭 −1.05R / 冠 +0.55R
+  const Rv=R/Math.cos(Math.PI/SIDES);
+  const verts=[], top=[], bot=[];
+  for(let k=0;k<SIDES;k++){
+    const a=(k+0.5)/SIDES*Math.PI*2;
+    verts.push([Math.cos(a)*Rv,  0.55*R, Math.sin(a)*Rv]); top.push(verts.length-1);
+    verts.push([Math.cos(a)*Rv, -1.05*R, Math.sin(a)*Rv]); bot.push(verts.length-1);
   }
-  state.solid=blank;
+  const faces=[];
+  for(let k=0;k<SIDES;k++){
+    const j=(k+1)%SIDES;
+    faces.push({loop:[top[k],top[j],bot[j],bot[k]], origin:'cut'});
+  }
+  faces.push({loop:top.slice().reverse(), origin:'cut'});
+  faces.push({loop:bot.slice(),           origin:'cut'});
+  state.solid={verts, faces};
   state.diagram.R=R;
   state.diagram.preformed=true;
   rebuildStone();
