@@ -107,7 +107,10 @@
 - 結算估價/評級公式是隨手抓的(`showResult()` 裡),數值平衡沒調過。圖紙模式成品率天生偏低(預成形吃掉很多料,約 10–15%),評語 <15% 那句會常駐,要嫌煩就調門檻。
 - 圖紙模式的深度止停滑桿玩家可以手動亂調(離開表定值),切了照樣不勾銷——是特性不是 bug(機器不會救你),但沒有明確提示為什麼沒打勾。
 - `preformDiagram()` 假設原石對 y=0 上下大致對稱(現有 7 個 builder 都滿足);之後若加不對稱原石要回頭看腰圍定位(`c=0.25R` 那段)。
-- **儲存只在 localStorage**:換電腦/換瀏覽器/清快取就消失;蒐集頁只存縮圖+參數,無法重建 3D 模型(詳情頁有註明)。要跨機同步得等匯出/匯入功能。
+- **儲存只在 localStorage**:換電腦/換瀏覽器/清快取就消失;蒐集頁只存縮圖+參數,無法重建 3D 模型(詳情頁有註明)。跨機用蒐集頁的「⬇匯出/⬆匯入存檔」(JSON,匯入=合併去重)。
+- **一天=一盤**:`session.vid='s_'+日期`,同日各爐自動併盤;`Vault.mergeByDate()` 在 load 時跑,也是舊資料遷移。
+- **標題字的坑**:`.tsTitle` 拆字後父層 `background-clip:text` 不會畫進 span → 漸層要掛在每個 `.tsChar` 上;空白字元用 NBSP 否則 inline-block 會塌。
+- **已上 git**(2026-07):repo 在專案根目錄,`參考圖/`(他人 IG 素材)與 `.claude/settings.local.json` 已 gitignore。部署走 GitHub Pages(純靜態,無 build,`index.html` 轉跳 `gemcraft.html`),用戶用 GitHub Desktop 推送。
 - **PMREM envMap 綁 renderer**(r128):`makeEnvTexture(renderer)` 與 `makeEnvTexture(shotR)` 各自產,不能共用,刪掉 shotR 那份 hero/縮圖會變黑。
 
 ---
