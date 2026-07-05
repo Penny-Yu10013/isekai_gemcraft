@@ -871,6 +871,8 @@ function updateNavCam(){
 topCam.position.set(0,-8,0); topCam.up.set(0,0,-1); topCam.lookAt(0,0,0); // 靜態初始,避免 TDZ
 // 縮圖擷取+hero 展示共用 renderer(preserveDrawingBuffer 讓 toDataURL 同步可靠)
 const shotR=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+shotR.toneMapping=THREE.ACESFilmicToneMapping;   // 高光緩降,白鑽/淺色石不過曝
+shotR.toneMappingExposure=0.85;
 const topCanvas=document.getElementById('topviewCanvas');
 const topR=new THREE.WebGLRenderer({canvas:topCanvas, antialias:true});
 topR.setSize(460,460,false); topR.setClearColor(0x05040a,1);
@@ -911,8 +913,9 @@ function ensureShotScene(){
   shotScene=new THREE.Scene();
   shotScene.background=new THREE.Color(0x0a0716);
   shotScene.environment=makeEnvTexture(shotR);
-  shotScene.add(new THREE.AmbientLight(0x8a80b8, 1.6));
-  const dl=new THREE.DirectionalLight(0xfff1dc, 1.6); dl.position.set(2,3,2); shotScene.add(dl);
+  shotScene.add(new THREE.AmbientLight(0x8a80b8, 0.8));
+  const dlT=new THREE.DirectionalLight(0xfff1dc, 1.0); dlT.position.set(2,3,2);  shotScene.add(dlT);   // 上光
+  const dlB=new THREE.DirectionalLight(0xb8a8ff, 0.55); dlB.position.set(-1.5,-3,-1); shotScene.add(dlB); // 下光(亭部也亮)
   shotCam=new THREE.PerspectiveCamera(38,1,0.05,50);
 }
 function frameShotCam(g, k){
@@ -950,8 +953,8 @@ function startHero(solid, colorHex){
   shotCam.aspect=1; shotCam.updateProjectionMatrix();
   const g=buildGeometry(solid);
   const m=new THREE.MeshPhysicalMaterial({color:new THREE.Color(colorHex),
-    metalness:0, roughness:0.05, clearcoat:1, clearcoatRoughness:0.06,
-    envMapIntensity:1.6, flatShading:true});
+    metalness:0, roughness:0.12, clearcoat:1, clearcoatRoughness:0.08,
+    envMapIntensity:1.0, flatShading:true});
   heroMesh=new THREE.Mesh(g,[m,m]);
   shotScene.add(heroMesh);
   frameShotCam(g, 1.0);
@@ -1478,8 +1481,9 @@ function expectedNormal(angle,index,crown){
   return [nl.x,nl.y,nl.z];
 }
 function cutNormal(){ return expectedNormal(state.angle,state.index,state.crown); }
-function maxSupport(n){
-  let dmax=-1e9; for(const v of state.solid.verts){ const dd=n[0]*v[0]+n[1]*v[1]+n[2]*v[2]; if(dd>dmax)dmax=dd; }
+function maxSupport(n, solid){
+  const vs=(solid||state.solid).verts;
+  let dmax=-1e9; for(const v of vs){ const dd=n[0]*v[0]+n[1]*v[1]+n[2]*v[2]; if(dd>dmax)dmax=dd; }
   return dmax;
 }
 // 絕對平面切割：d 是石頭局部座標的平面距離(mast height 類比),同參數重切=無損
@@ -1510,29 +1514,58 @@ function preform(){
 // 圖紙預成形:裁成已知半徑 R 的 24 角柱標準粗胚,腰圍平面置於局部 y=0。
 // 軸向配置:亭部留 −1.05R(43° 主刻面收底尖需 ~0.93R),冠部留 +0.55R。
 // 前提:所有晶系原石都對 y=0 上下大致對稱(SYSTEMS 的 builder 皆滿足)。
+// ⚠ 八面體/方柱類水平截面不是圓:整體支撐半徑 ≠ 腰圍平面的實際內半徑,
+//   R 抓太大會讓冠部整層落空(鑽石/石榴石踩過)→ 迭代量腰圍平面內半徑收斂。
+function cloneSolid(s){
+  return {verts:s.verts.map(v=>v.slice()), faces:s.faces.map(f=>({loop:f.loop.slice(), origin:f.origin}))};
+}
 function preformDiagram(){
   if(!state||!state.diagram||state.diagram.preformed) return;
   const SIDES=24;
+  const orig=cloneSolid(state.solid);
   let ymin=1e9,ymax=-1e9;
-  for(const v of state.solid.verts){ if(v[1]<ymin)ymin=v[1]; if(v[1]>ymax)ymax=v[1]; }
+  for(const v of orig.verts){ if(v[1]<ymin)ymin=v[1]; if(v[1]>ymax)ymax=v[1]; }
+  // 初估 R:整體最小徑向支撐
   let R=1e9;
   for(let k=0;k<SIDES;k++){
     const a=k/SIDES*Math.PI*2;
-    R=Math.min(R, maxSupport([Math.cos(a),0,Math.sin(a)]));
+    R=Math.min(R, maxSupport([Math.cos(a),0,Math.sin(a)], orig));
   }
   R*=0.95;
   R=Math.min(R,(ymax-ymin)/1.6);     // 軸向要塞得下 1.6R 的帶
-  // 腰圍放在原始 y=+0.25R → 帶 [−0.8R,+0.8R] 對稱涵蓋最寬的赤道
-  const c=0.25*R;
-  for(const v of state.solid.verts){ v[1]-=c; }
-  let s=clipSolid(state.solid,[0,1,0],0.55*R);
-  if(s) s=clipSolid(s,[0,-1,0],1.05*R);
-  for(let k=0;k<SIDES && s;k++){
-    const a=k/SIDES*Math.PI*2;
-    s=clipSolid(s,[Math.cos(a),0,Math.sin(a)],R);
+  function buildBlank(Rv){
+    const w=cloneSolid(orig);
+    const c=0.25*Rv;                 // 腰圍放原始 y=+0.25R,帶對稱涵蓋赤道
+    for(const v of w.verts){ v[1]-=c; }
+    let s=clipSolid(w,[0,1,0],0.55*Rv);
+    if(s) s=clipSolid(s,[0,-1,0],1.05*Rv);
+    for(let k=0;k<SIDES && s;k++){
+      const a=k/SIDES*Math.PI*2;
+      s=clipSolid(s,[Math.cos(a),0,Math.sin(a)],Rv);
+    }
+    return s;
   }
-  if(!s){ console.warn('preformDiagram 失敗'); return; }
-  state.solid=s;
+  function girdleInradius(s, Rv){
+    // 取腰圍平面 ±2%R 薄片,量 48 方位最小支撐=腰圍實際內半徑
+    let slab=clipSolid(cloneSolid(s),[0,1,0],0.02*Rv);
+    if(slab) slab=clipSolid(slab,[0,-1,0],0.02*Rv);
+    if(!slab) return Rv;
+    let g=1e9;
+    for(let k=0;k<48;k++){
+      const a=k/48*Math.PI*2;
+      g=Math.min(g, maxSupport([Math.cos(a),0,Math.sin(a)], slab));
+    }
+    return g;
+  }
+  let blank=null;
+  for(let pass=0; pass<3; pass++){
+    blank=buildBlank(R);
+    if(!blank){ console.warn('preformDiagram 失敗'); return; }
+    const g=girdleInradius(blank, R);
+    if(g>=R*0.995) break;            // 腰圍夠寬,收斂
+    R=g*0.99;                        // 縮到腰圍實際內半徑再重做
+  }
+  state.solid=blank;
   state.diagram.R=R;
   state.diagram.preformed=true;
   rebuildStone();
