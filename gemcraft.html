@@ -163,6 +163,8 @@
     transition:left .25s ease, top .25s ease;}
   .coachHead{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
   #coachStepNo{font-size:11px; color:var(--dim); letter-spacing:.05em;}
+  .coachFoot{margin-top:8px; text-align:right;}
+  #coachNext{font-size:12px; padding:5px 12px; border-color:var(--gold); color:var(--gold);}
   #coachSkip{font-size:11px; padding:3px 8px; background:transparent; border:1px solid var(--line); color:var(--dim);}
   #coachSkip:hover{border-color:var(--warn); color:var(--warn);}
   #coachTxt{font-size:13px; line-height:1.55; color:var(--text);}
@@ -299,6 +301,7 @@
 
   #leftTools{position:absolute; top:96px; left:14px; display:flex; flex-direction:column; gap:8px;}
   #leftTools button{font-size:13px; text-align:left;}
+  #leftCollapseBtn{display:none;} /* 手機版才出現(左欄收合) */
 
   /* ===== 鏟寶石結算 / 蒐集頁 ===== */
   .card.wide{width:min(880px,94vw);}
@@ -458,9 +461,11 @@
     #topviewCanvas,.navStage,#compass{width:126px; height:126px;}
     #topviewWrap .label{font-size:10px; margin-bottom:4px;}
     #compassToggle{font-size:10px; padding:4px 6px;}
-    /* 左欄 */
+    /* 左欄 + 收合鈕(手機版才顯示) */
     #leftTools{top:96px; left:8px; gap:6px;}
     #leftTools button{font-size:11px; padding:6px 8px;}
+    #leftCollapseBtn{display:block; align-self:flex-start;}
+    #leftTools.collapsed > *:not(#leftCollapseBtn){display:none !important;}
     #diagramPanel{width:46vw; max-height:26vh;}
     .tierRow{padding:6px 8px;}
     .tierHead{font-size:11px;} .tierHead b{font-size:12px;}
@@ -470,6 +475,9 @@
     /* 操作台:滿版貼底,左邊留音效/主題鈕的走道 */
     #console{left:56px; right:8px; bottom:8px; width:auto;
       padding:8px 10px 10px; gap:6px; max-height:56vh; overflow-y:auto;}
+    /* 收合鈕收進排版流第一列(原本 top:-14 突出面板,會被 overflow-y:auto 裁掉點不到) */
+    #collapseBtn{position:static; order:-1; align-self:flex-end;
+      margin:-2px -2px 0 0; padding:6px 14px; font-size:12px;}
     .ctrlRow{gap:6px 10px;}
     .ctrlGroup label{font-size:10px;}
     .ctrlGroup label b{font-size:12px;}
@@ -615,6 +623,7 @@
   </div>
 
   <div id="leftTools" class="pointerOn">
+    <button id="leftCollapseBtn">◀ 收合面板</button>
     <button id="helpBtn">❔ 教學 / 怎麼玩</button>
     <button id="lapToggle">▦ 研磨台：實體</button>
     <button id="tintBtn">🎨 附魔轉色</button>
@@ -711,6 +720,7 @@
   <div id="coachBubble">
     <div class="coachHead"><span id="coachStepNo">1 / 3</span><button id="coachSkip">✕ 略過導覽</button></div>
     <div id="coachTxt"></div>
+    <div class="coachFoot"><button id="coachNext">下一步 ▸</button></div>
   </div>
 </div>
 
@@ -1888,6 +1898,14 @@ const expandBtn=document.getElementById('expandBtn');
 document.getElementById('collapseBtn').onclick=()=>{ consoleEl.style.display='none'; expandBtn.style.display='block'; coachPosition(); };
 expandBtn.onclick=()=>{ consoleEl.style.display='flex'; expandBtn.style.display='none'; coachPosition(); };
 
+// 左欄收合(手機版):收起只留 📜 鈕,再點展開
+const leftToolsEl=document.getElementById('leftTools');
+document.getElementById('leftCollapseBtn').onclick=()=>{
+  const on=leftToolsEl.classList.toggle('collapsed');
+  document.getElementById('leftCollapseBtn').textContent=on?'📜 展開面板':'◀ 收合面板';
+  coachPosition();
+};
+
 // 研磨台顯示模式：實體 / 線框 / 隱藏(機台載入後控制整台機器)
 let lapMode=0;
 function setLapMode(m){
@@ -1935,16 +1953,35 @@ function coachPosition(){
   hi.style.width=(r.width+12)+'px'; hi.style.height=(r.height+12)+'px';
   document.getElementById('coachStepNo').textContent=(coachStep+1)+' / '+COACH_STEPS.length;
   document.getElementById('coachTxt').innerHTML=step.txt;
-  const bubble=document.getElementById('coachBubble'), bw=270;
+  document.getElementById('coachNext').textContent=
+    (coachStep>=COACH_STEPS.length-1)?'✓ 完成':'下一步 ▸';
+  const bubble=document.getElementById('coachBubble'), bw=Math.min(270,innerWidth*0.86);
   let bx=r.right+18;
   if(bx+bw>window.innerWidth-10) bx=Math.max(10,r.left-bw-18);
-  const by=Math.min(Math.max(10,r.top), window.innerHeight-180);
+  let by=Math.min(Math.max(10,r.top), window.innerHeight-180);
+  if(bx<r.right && bx+bw>r.left){
+    // 兩側都塞不下(窄螢幕):改放目標下方,不然上方——別蓋住要點的東西
+    bx=Math.min(Math.max(10,r.left), innerWidth-bw-10);
+    by=(r.bottom+14+170<innerHeight)? r.bottom+14 : Math.max(10,r.top-184);
+  }
   bubble.style.left=bx+'px'; bubble.style.top=by+'px';
 }
-function coachShow(step){ coachStep=step; coachPosition(); }
+function coachShow(step){
+  coachStep=step;
+  // 目標若在可捲動面板(指令表)裡先捲進視野,座標才會準
+  const s=COACH_STEPS[step];
+  if(s){ const el=document.querySelector(s.sel);
+    if(el && el.offsetParent!==null && el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }
+  coachPosition();
+}
 function coachHide(){ coachStep=-1; coachPosition(); }
 document.getElementById('coachSkip').onclick=coachHide;
+document.getElementById('coachNext').onclick=()=>{
+  if(coachStep>=COACH_STEPS.length-1) coachHide(); else coachShow(coachStep+1);
+};
 window.addEventListener('resize',coachPosition);
+// 手機上面板捲動/瀏覽器工具列縮放都會讓框飄掉:導覽顯示中每 250ms 跟刷一次位置
+setInterval(()=>{ if(coachStep>=0) coachPosition(); },250);
 
 // 導覽器方位尺(羅盤)
 function buildCompass(){

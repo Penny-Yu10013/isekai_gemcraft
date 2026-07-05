@@ -111,6 +111,11 @@
   - **文案**:`IS_TOUCH`(pointer:coarse)時下壓鈕文案去掉「左鍵」(`PRESS_LABEL`)、教學卡「右鍵拖曳/滾輪」字眼換成觸控版;coachmark ③ 改裝置中性「滑鼠或手指壓著」。觸控裝置 `#console` 的 hover 淡出改常駐 92% 透明度(`@media (hover:none)`)。
   - **實測**:375×812 全流程(選石→預成形→合成 TouchEvent 壓到深度止停→鬆手勾銷→陣列快切→結算)通過,oct8 17/17 稽核不受影響;桌面(>720px)迴歸無變化;亮色主題×手機版相容。**已知妥協**:手機橫拿(812×375)導覽器與操作台右上角小面積重疊,靠操作台可捲動+微透明堪用——**直向是主設計模式**。
   - 附帶:`.claude/launch.json` 改 `autoPort`(8123 被別的 session 占走時自動換 port,http-server 吃 PORT 環境變數)。
+- [x] **手機版實機回饋修正**(2026-07 第七輪後續,用戶 iPhone 實測三個問題):
+  - **收合操作台鈕被裁切**:上一輪給 `#console` 加的 `overflow-y:auto` 把突出面板頂的 `#collapseBtn`(top:-14)剪掉了 → 手機版把它改 `position:static; order:-1` 收進 flex 排版流第一列(靠右),桌面浮動樣式不動。
+  - **左欄收合**(`#leftCollapseBtn`,手機版才顯示):「◀ 收合面板」⇄「📜 展開面板」,收起時 `#leftTools.collapsed > *:not(#leftCollapseBtn){display:none !important}` 藏掉教學/研磨台/附魔/指令表整欄(`!important` 蓋得過 JS 寫的 inline display),看石頭不擋視線。
+  - **coachmark 框選偏移+卡步驟**:根因是 `coachPosition()` 只在 resize/收合時重算,手機上指令表捲動、iOS 工具列縮放、預成形後面板長高都會讓金框停在舊位置 → ①導覽顯示中改 **每 250ms setInterval 跟刷**(任何漂移 0.25 秒內歸位);②泡泡加「**下一步 ▸**」鈕(末步變「✓ 完成」),手動推進不再依賴玩家做對動作才前進(用戶建議的形式);③`coachShow` 先把目標 `scrollIntoView` 再定位;④窄螢幕兩側塞不下泡泡時改放目標正下方/上方,不蓋住要點的元素。注意 `#coachHi` 有 0.25s CSS transition,程式讀 highlight 位置要等過渡完。
+  - 全流程手機重測:①→②→③→④ 金框全部貼合目標、下一步/完成可點、左欄收展正常;桌面(>720px)迴歸無變化(左欄鈕隱藏、操作台鈕維持浮動)。
 - [x] **亮色玻璃主題(Apple 風 liquid-glass)+ 明暗切換**(2026-07 第六輪):`#themeBtn`(🌙/☀️,`sndBtn` 右邊)一鍵切,存 `localStorage gemcraft.theme`,預設暗色。**只換 UI 外殼**,3D 切割場景(教堂光/霧/暗角/導覽器小視窗/hero 旋轉視窗)刻意維持原樣不動(用戶裁定範圍)。實作方式:整包疊在 `html[data-theme="light"]` 選擇器裡,一行都沒改原本的暗色規則本身——靠選擇器優先度覆蓋,零迴歸風險(已截圖比對確認暗色主題像素級不變)。分兩層:①核心變數(`--panel/--line/--accent/--accent2/--text/--dim/--warn/--gold`)重新賦值,套用到所有原本就用 `var()` 的規則(按鈕文字/邊框/hint 等大部分自動吃到);②約 20 條寫死 hex 顏色的規則(sysCard/diagCard/tierRow/idxChip/結算卡/教學卡/蒐集頁等)逐一加 `html[data-theme="light"] 選擇器{}` 明版覆蓋。**踩過的坑**:沒包在 `.panel`(沒有自己 `backdrop-filter`)、直接浮在 3D 場景上的裸 `button`(左側 `#leftTools` 三顆、`#tintRow`、`#coachBubble`)一開始只換了半透明白底沒加 blur,亮背景會把文字洗到快看不見——後來在 `html[data-theme="light"] button` 統一補 `backdrop-filter:blur(14px) saturate(160%)` 才解決;已包在 `.panel` 裡的子元素(console 內按鈕、tierRow 在 diagramPanel 裡)不需要自己 blur,吃父層的就夠。大面板(`.panel`/結算卡/蒐集頁/教學遮罩)用 `blur(22px) saturate(180%)`。
 
 ---
@@ -192,6 +197,7 @@
 | **自由切割警示角標** | `.hardBadge`(套 `.recBadge` 定位,紅橙漸層),選石畫面自由切割卡上的「🔥匠人精神」,對比圖紙卡的「⭐推薦入門」 |
 | **圖紙卡 icon** | `.dcIcon` base64,來源 `瑰藝局\jewelcraft\assets\gems\`(JewelCraft GPL-3.0,`light/`=白線稿給暗色主題、`dark/`=黑線稿,亮色主題靠 CSS `filter:invert(1)` 從白轉黑,不用另外嵌 dark 版)。五份圖紙全配到位:oct8=octagon、srb57=port97=round、asscher49=asscher、tri16=trillion。`.recBadge` 推薦角標。要加新圖紙 icon 就去該資料夾選同名或形狀最近的 `light/*.png` 轉 base64 塞進對應 `<img class="dcIcon">` |
 | **手機版/觸控** | CSS 尾端「手機版」區塊(`@media (max-width:720px)` 等,疊加不動桌面規則)、canvas `touchstart/touchmove`(orbit+`pinchD` 捏合)、`pressBtn` touchstart、`IS_TOUCH`/`defaultCamR`/`PRESS_LABEL` |
+| **左欄收合(手機)** | `#leftCollapseBtn`(桌面 display:none)、`#leftTools.collapsed` CSS |
 | **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
 | **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |
 
