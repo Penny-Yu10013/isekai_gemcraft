@@ -96,6 +96,9 @@
   - 每顆石頭在提交/報廢時用 `captureStoneThumb`(shotR 離屏渲染 96px JPEG ~3KB)拍縮圖入盤;結算卡兩欄:左=鏟子 SVG+縮圖彈跳撒入(`pourIn`),右=hero 主角石實時 3D 旋轉(`startHero`,MeshPhysicalMaterial+自產 envMap 亮晶晶)+原數據/鑑定
   - `Vault`(key `gemcraft.vault.v1`):一爐=一盤(session.vid/date),同 uid 重提交=覆蓋;上限 600 顆,超額砍最舊非⭐;無痕/擋儲存靜默降級
   - 蒐集頁(`#galleryScreen`,選石畫面/結算 foot 進入):一盤一卡按日期,點石頭開詳情(參數+⭐最滿意,⭐石在盤中放大)
+- [x] **左欄排版修正 + 淺色石稜線描邊**(2026-07 第四輪,修用戶回報兩個視覺 bug):
+  - **左欄不再互蓋**:`#diagramPanel` 原本絕對定位 `top:190px`,圖紙模式會蓋住第三顆 🎨 附魔轉色鈕(用戶:「這個按鈕只有我會知道而已」);現在整個收進 `#leftTools` 的 flex column 正常排版流(HTML 也搬進去了),`#tintRow` 調色盤改成按鈕正下方原地展開(6×2 grid,不再是浮在 3D 畫面上的絕對定位 popover),開合會把指令表往下推,三者永不重疊。`#diagramPanel` max-height 56vh→48vh 補償排版流起點變低。
+  - **淺色石看得到刻面**:白鑽在切割視圖整坨死白、刻面邊界讀不出來 → `rebuildStone` 對亮度 lum>0.85 的石色(白鑽 0xdce8f2)疊一層 `EdgesGeometry` 深色稜線(石色×0.38)+ 面色×0.9 微降亮 + 兩個面材質開 polygonOffset 防線面 z-fighting;深色石完全不動。稜線是 stoneMesh 的 child,跟著傾斜/自旋,導覽器 top view 也看得到;rebuild 時會 dispose 舊稜線。已用 `#dev` oct8 全程切完驗證 17/17 命中、偏差 0°,切割數學不受影響。
 - [x] **機台模型導入 + 標題畫面**(2026-07):`machine_model/` 的切割機 GLB 以 **base64 內嵌**在 HTML(`window.MACHINE_GLB_B64` 那行,~1.1MB,**別手改**,重生成用 `machine_model/inject_glb.ps1`)。流程變成:標題畫面(定鏡看機台,機件全動:lap 轉/魔法陣呼吸閃爍/水滴循環/分度輪慢轉/機臂呼吸)→ 點擊 → 選晶系+圖紙 → 切割介面。切割介面裡機台取代舊簡易研磨台(`lapGroup`/`floor` 退役但保留當 fallback),**石頭/dop 仍是遊戲原本那套會動的**(手感核心不動),機臂抬起待命(`PARK_ANGLE`);轉 index 時機台 96 齒分度輪會跟著跳齒。GLTFLoader 從 jsdelivr CDN 載;GLB 載入失敗自動退回舊簡易研磨台,遊戲照玩。
 
 ---
@@ -112,7 +115,7 @@
 - **儲存只在 localStorage**:換電腦/換瀏覽器/清快取就消失;蒐集頁只存縮圖+參數,無法重建 3D 模型(詳情頁有註明)。跨機用蒐集頁的「⬇匯出/⬆匯入存檔」(JSON,匯入=合併去重)。
 - **一天=一盤**:`session.vid='s_'+日期`,同日各爐自動併盤;`Vault.mergeByDate()` 在 load 時跑,也是舊資料遷移。
 - **標題字的坑**:`.tsTitle` 拆字後父層 `background-clip:text` 不會畫進 span → 漸層要掛在每個 `.tsChar` 上;空白字元用 NBSP 否則 inline-block 會塌。
-- **已上 git**(2026-07):repo 在專案根目錄,`參考圖/`(他人 IG 素材)與 `.claude/settings.local.json` 已 gitignore。部署走 GitHub Pages(純靜態,無 build,`index.html` 轉跳 `gemcraft.html`),用戶用 GitHub Desktop 推送。
+- **已上 git**(2026-07):repo 在專案根目錄,`參考圖/`(他人 IG 素材)與 `.claude/settings.local.json` 已 gitignore。部署走 GitHub Pages(純靜態,無 build,`index.html` 轉跳 `gemcraft.html`),用戶用 GitHub Desktop 推送。Pages 偶發 `Deployment failed` 多為 GitHub Actions 暫時性抽風,手動 Re-run 即可。
 - **PMREM envMap 綁 renderer**(r128):`makeEnvTexture(renderer)` 與 `makeEnvTexture(shotR)` 各自產,不能共用,刪掉 shotR 那份 hero/縮圖會變黑。
 
 ---
@@ -168,7 +171,8 @@
 | **蒐集頁 / 石頭詳情** | `openGallery`/`renderGallery`/`openStoneDetail`、`#galleryScreen`/`#stoneDetail` |
 | **標題演出** | `.tsChar` 逐字動畫、`armBase`/`armCur`(工作姿勢↔抬臂) |
 | **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀;mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
-| **附魔轉色** | `TINTS` 陣列、`#tintBtn`/`#tintRow`(leftTools 下),reset dot=回原石色 |
+| **附魔轉色** | `TINTS` 陣列、`#tintBtn`/`#tintRow`(leftTools 內原地展開,in-flow 非浮動),reset dot=回原石色 |
+| **淺色石稜線描邊** | `rebuildStone` 的 `lum>0.85` 分支(EdgesGeometry+polygonOffset) |
 | **圖紙卡 icon** | `.dcIcon` base64(取自 JewelCraft GPL-3.0,octagon/round),`.recBadge` 推薦角標;重注入用 PS Replace `__ICON_OCT__`/`__ICON_ROUND__` 佔位(已注入,佔位符已不在) |
 | **標題畫面/開場流程** | HTML `#titleScreen`、`titleMode`、`animate` 裡的定鏡塊、`titleScreen.onclick` |
 | **GLB base64 資料行** | `window.MACHINE_GLB_B64=`(1.1MB 單行,別手改,用 `machine_model/inject_glb.ps1` 重生) |

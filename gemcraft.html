@@ -141,10 +141,9 @@
     box-shadow:0 2px 8px #0007;}
 
   /* ---- 附魔轉色 / 音效鈕 ---- */
-  #tintRow{position:absolute; left:272px; top:70px; width:156px;
-    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
-    padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:10px;
-    z-index:5;}
+  #tintRow{width:100%;
+    display:grid; grid-template-columns:repeat(6,1fr); gap:6px; justify-items:center;
+    padding:8px 6px; background:var(--panel); border:1px solid var(--line); border-radius:10px;}
   .tintDot{width:26px; height:26px; border-radius:50%; border:2px solid #ffffff33; cursor:pointer;}
   .tintDot:hover{border-color:#fff; transform:scale(1.12);}
   .tintDot.reset{background:conic-gradient(#c22740,#d98a2b,#ffd479,#2ea860,#2f7fb0,#7a3fb0,#c22740);}
@@ -152,8 +151,8 @@
     width:44px; height:44px; border-radius:50%; padding:0;}
 
   /* ---- 圖紙指令表面板 ---- */
-  #diagramPanel{position:absolute; top:190px; left:14px; width:262px;
-    max-height:56vh; overflow-y:auto; padding:10px 0 10px;
+  #diagramPanel{width:262px;
+    max-height:48vh; overflow-y:auto; padding:10px 0 10px;
     display:flex; flex-direction:column; gap:8px;}
   #diagramPanel .dgHead{font-size:14px; font-weight:600; padding:0 12px;
     color:var(--gold);}
@@ -431,13 +430,12 @@
     <button id="lapToggle">▦ 研磨台：實體</button>
     <button id="tintBtn">🎨 附魔轉色</button>
     <div id="tintRow" style="display:none;"></div>
-  </div>
-
-  <div id="diagramPanel" class="panel pointerOn" style="display:none;">
-    <div class="dgHead"><span id="dgName">📜 —</span></div>
-    <div id="dgHint" class="hint" style="text-align:left; padding:0 12px;">—</div>
-    <div id="dgTiers"></div>
-    <div id="dgWarn"></div>
+    <div id="diagramPanel" class="panel" style="display:none;">
+      <div class="dgHead"><span id="dgName">📜 —</span></div>
+      <div id="dgHint" class="hint" style="text-align:left; padding:0 12px;">—</div>
+      <div id="dgTiers"></div>
+      <div id="dgWarn"></div>
+    </div>
   </div>
 
   <div id="scrapTray"></div>
@@ -1423,7 +1421,8 @@ function newSession(){
 
 let stoneMesh=null;
 function rebuildStone(){
-  if(stoneMesh){ scene.remove(stoneMesh); stoneMesh.geometry.dispose(); }
+  if(stoneMesh){ scene.remove(stoneMesh); stoneMesh.geometry.dispose();
+    stoneMesh.children.forEach(c=>{ if(c.geometry)c.geometry.dispose(); if(c.material)c.material.dispose(); }); }
   const g=buildGeometry(state.solid);
   const base=new THREE.Color(state.color);
   const matCrystal=new THREE.MeshStandardMaterial({
@@ -1431,6 +1430,15 @@ function rebuildStone(){
   const lap=LAPS[state.lap].mat(); lap.color=base.clone();
   if(state.lap===2){ lap.color=base.clone().multiplyScalar(1.15); lap.emissive=base.clone().multiplyScalar(0.08); }
   stoneMesh=new THREE.Mesh(g,[matCrystal,lap]);
+  // 淺色石(白鑽等)在打光下整坨過亮,刻面邊界讀不出來 → 面色微降亮 + 疊深色稜線;深色石不加,維持原觀感
+  const lum=0.299*base.r+0.587*base.g+0.114*base.b;
+  if(lum>0.85){
+    lap.color.multiplyScalar(0.9);
+    [matCrystal,lap].forEach(m=>{ m.polygonOffset=true; m.polygonOffsetFactor=1; m.polygonOffsetUnits=1; });
+    stoneMesh.add(new THREE.LineSegments(
+      new THREE.EdgesGeometry(g, 2),
+      new THREE.LineBasicMaterial({color:base.clone().multiplyScalar(0.38), transparent:true, opacity:0.85})));
+  }
   scene.add(stoneMesh);
   updateInfo();
   updateNavCam(); // 新 mesh 立刻套用傾斜/自旋
