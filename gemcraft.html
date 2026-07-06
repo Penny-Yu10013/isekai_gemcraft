@@ -1088,7 +1088,8 @@ function buildGeometry(solid){
 //   Three.js 場景
 // ============================================================
 const app=document.getElementById('app');
-const renderer=new THREE.WebGLRenderer({antialias:true});
+// #shot 旗標:開 preserveDrawingBuffer 讓 canvas.toDataURL 可用(拍宣傳截圖用,平常關=省效能)
+const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:location.hash.includes('shot')});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(0x000000,0);

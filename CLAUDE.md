@@ -116,6 +116,11 @@
   - **左欄收合**(`#leftCollapseBtn`,手機版才顯示):「◀ 收合面板」⇄「📜 展開面板」,收起時 `#leftTools.collapsed > *:not(#leftCollapseBtn){display:none !important}` 藏掉教學/研磨台/附魔/指令表整欄(`!important` 蓋得過 JS 寫的 inline display),看石頭不擋視線。
   - **coachmark 框選偏移+卡步驟**:根因是 `coachPosition()` 只在 resize/收合時重算,手機上指令表捲動、iOS 工具列縮放、預成形後面板長高都會讓金框停在舊位置 → ①導覽顯示中改 **每 250ms setInterval 跟刷**(任何漂移 0.25 秒內歸位);②泡泡加「**下一步 ▸**」鈕(末步變「✓ 完成」),手動推進不再依賴玩家做對動作才前進(用戶建議的形式);③`coachShow` 先把目標 `scrollIntoView` 再定位;④窄螢幕兩側塞不下泡泡時改放目標正下方/上方,不蓋住要點的元素。注意 `#coachHi` 有 0.25s CSS transition,程式讀 highlight 位置要等過渡完。
   - 全流程手機重測:①→②→③→④ 金框全部貼合目標、下一步/完成可點、左欄收展正常;桌面(>720px)迴歸無變化(左欄鈕隱藏、操作台鈕維持浮動)。
+- [x] **推廣 landing page + 宣傳截圖管線**(2026-07 第九輪,用戶四選一裁定:首頁 landing/暗色魔法風/YouTube 佔位/純英文):
+  - **`index.html` 從轉跳頁改成英文推廣頁**:hero(大 Play 鈕→gemcraft.html)+影片區(YouTube 佔位,`const YT_ID=""` 填影片 ID 即自動換 iframe,沒填顯示機台海報+TRAILER COMING SOON)+三特色卡+截圖區+圖紙表+How it works(凸多面體技術段,關鍵詞:real-time convex clipping/procedural gemstone faceting/computational geometry in the browser)+開源 CTA+footer。styling 沿用遊戲暗色魔法調色盤,RWD(375px 無橫捲)。**og:image/twitter card 已配**(shot_title.jpg 絕對網址),社群分享有大圖。
+  - **`#shot` 截圖旗標**(gemcraft.html):URL hash 含 `shot` 時 renderer 開 `preserveDrawingBuffer`,console 可用 `renderer.domElement.toDataURL()` 拍乾淨 3D 圖(無 UI overlay);`#shot-dev` 可同時啟用 `__diag`。**拍圖流程備忘**:preview 分頁背景化會暫停 rAF → 拍之前要手動 `renderer.render(scene,camera)` 刷一幀;等 `machineRoot` 非 null 才代表 GLB 載完;落地用臨時 Node 接收器(頁面 fetch POST dataURL 到 localhost 小 server,scratchpad 有範本 shot_receiver.js 的做法)。
+  - **`assets/`**:shot_title.jpg(標題機台,og:image)、shot_asscher.jpg(白鑽 Asscher+稜線)、shot_port97.jpg(紫晶 Portuguese),全部 1200×675 遊戲內實拍。
+  - **repo topics/描述已設**(gh CLI):threejs/webgl/computational-geometry/convex-clipping/faceting/lapidary/gemstone 等。
 - [x] **中英雙語切換(i18n)+ 開源推廣配套**(2026-07 第八輪,for 英文推特/介紹/影片推廣):
   - **架構**(零邏輯改動,只動文字層):①動態字串 → `tx(zh,en)` 雙語內聯 helper(檔頭宣告 `UI_LANG`,約 40 處呼叫點:結算毒舌/勾銷警告/nextCutBar/羅盤/盲切/蒐集頁/詳情/confirm/alert 全含);②靜態 HTML → 檔尾 `I18N_STATIC` 選擇器表(~55 條,zh 原文首次套用時從 HTML 快取,所以**繁中以 HTML 為準**、英文在表裡);③資料物件 → `SYSTEMS`(nameEn/gemEn/shapeEn)、`DIAGRAMS`(nameEn/descEn)、`LAPS`(nameEn)、`GEM_NAMES_EN`、`TIER_LABEL_EN`(Pav/Crn/Gdl),取用走 `dgName()/dgDesc()/lapName()/tierLabel()` helper。
   - **切換**:`#langBtn`(主題鈕右邊/手機左下直排第三顆,顯示目標語言「EN/中」),`applyLang()` 即時切換=靜態表重套+標題重拆字(`renderTitle`)+晶系卡重生+各動態 label 依現況重刷;存 `localStorage gemcraft.lang`,預設繁中。
@@ -189,6 +194,8 @@
 | **魔法快切導覽(coachmark)** | `COACH_STEPS`、`coachShow`/`coachHide`/`coachPosition`、HTML `#coachMark` |
 | **亮色玻璃主題 / 明暗切換** | CSS `html[data-theme="light"]` 區塊(疊加,不改暗色原規則)、JS `applyTheme`、HTML `#themeBtn` |
 | **中英雙語(i18n)** | 檔頭 `UI_LANG`/`tx(zh,en)`、檔尾 `I18N_STATIC` 表+`applyStaticLang`/`applyLang`、`#langBtn`;資料欄位 `nameEn/descEn/gemEn/shapeEn`、helper `dgName/dgDesc/lapName/tierLabel`;**加新 UI 文字一律走 tx() 或 I18N_STATIC,別寫死單語** |
+| **推廣頁 / 影片嵌入** | `index.html`(landing,獨立檔不影響遊戲);影片好了改裡面的 `const YT_ID=""` |
+| **宣傳截圖** | URL 加 `#shot`(或 `#shot-dev`)→ `renderer.domElement.toDataURL()`;成品在 `assets/`;注意背景分頁 rAF 暫停要手動 render 一幀 |
 | 對稱性評分 | `updateSymmetry` |
 | **機台模型載入/換裝/動態** | `loadMachine`、`setupMachine`(lapSpin/quillPark/gearSpin 分組)、`tickMachine`、`PARK_ANGLE` |
 | **氛圍(教堂環境/霧氣/光柱)** | `makeEnvScene`/`makeEnvTexture`(彩窗 envMap——**金屬材質全靠它亮**,別刪)、`fxGroup`/`tickFx`(乾冰霧+god rays)、CSS `#vignette`、`scene.fog` |
