@@ -2,6 +2,8 @@
 
 Thanks for your interest! The primary contribution path is **new faceting diagrams** — the diagram system is fully data-driven, so a new cut design touches data only, never the engine.
 
+By contributing, you agree your contribution is licensed under **[GPL-3.0](LICENSE)**, same as the project.
+
 > Deep-dive methodology doc: [`新增切型指南.md`](新增切型指南.md) (Traditional Chinese). Everything essential is summarized in English below — you don't need the Chinese doc to contribute.
 
 ## What a diagram PR changes

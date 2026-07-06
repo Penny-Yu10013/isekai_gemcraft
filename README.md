@@ -67,4 +67,4 @@ The engineering handover doc is [`CLAUDE.md`](CLAUDE.md) (architecture decisions
 
 ## License
 
-Code license: not yet chosen (all rights reserved for now — open an issue if this blocks you). Embedded cut-shape icons remain GPL-3.0 per JewelCraft.
+**[GPL-3.0](LICENSE)** — free to play, study, modify and redistribute; derivatives must stay open source. Embedded cut-shape icons are from JewelCraft (also GPL-3.0).
