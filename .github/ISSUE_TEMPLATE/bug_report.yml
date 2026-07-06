@@ -1,0 +1,44 @@
+name: "🐛 Bug Report"
+description: Something broke (geometry, UI, mobile, save data…)
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: env
+    attributes:
+      label: Device / browser
+      placeholder: iPhone 15 Safari / Windows Chrome 126 / …
+    validations:
+      required: true
+  - type: dropdown
+    id: lang
+    attributes:
+      label: UI language when it happened
+      options: ["繁體中文", "English", "both / doesn't matter"]
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Pick Asscher 49 + Diamond
+        2. Preform, cut G row
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected vs. what happened
+    validations:
+      required: true
+  - type: checkboxes
+    id: geometry
+    attributes:
+      label: If it's a geometry bug
+      options:
+        - label: The mesh actually has holes / missing / broken faces (not just "my cut came out ugly or asymmetric")
+  - type: textarea
+    id: shots
+    attributes:
+      label: Screenshots
+      description: Annotated screenshots are the fastest way to get this fixed.

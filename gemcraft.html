@@ -381,6 +381,8 @@
      ============================================================ */
   #themeBtn{position:fixed; left:66px; bottom:18px; z-index:55; font-size:16px;
     width:44px; height:44px; border-radius:50%; padding:0;}
+  #langBtn{position:fixed; left:118px; bottom:18px; z-index:55; font-size:13px; font-weight:700;
+    width:44px; height:44px; border-radius:50%; padding:0; letter-spacing:.02em;}
 
   html[data-theme="light"]{ --panel:rgba(255,255,255,.68); --line:rgba(140,125,190,.4);
     --accent:#8b5cf6; --accent2:#0d9488; --text:#2b2440; --dim:#746e94; --warn:#c53c52; --gold:#c8860a; }
@@ -494,9 +496,10 @@
     #collapseBtn{top:-12px; right:8px;}
     .hint{font-size:10px;}
     #expandBtn{right:8px; bottom:8px;}
-    /* 音效/主題鈕改左下直排(操作台左走道);z 降到彈窗(結算/蒐集/教學)之下不擋內容 */
+    /* 音效/主題/語言鈕改左下直排(操作台左走道);z 降到彈窗(結算/蒐集/教學)之下不擋內容 */
     #sndBtn{left:8px; bottom:8px; width:40px; height:40px; z-index:30;}
     #themeBtn{left:8px; bottom:56px; width:40px; height:40px; z-index:30;}
+    #langBtn{left:8px; bottom:104px; width:40px; height:40px; z-index:30; font-size:12px;}
     /* 標題/選石畫面 */
     .tsTitle{font-size:30px;}
     #titleScreen{padding-bottom:12vh;}
@@ -544,6 +547,8 @@
 <button id="sndBtn" title="背景音與音效開關">🔊</button>
 <!-- 亮/暗玻璃主題切換(只換 UI 外殼,3D 場景不動) -->
 <button id="themeBtn" title="切換亮色玻璃 / 暗色主題">🌙</button>
+<!-- 語言切換 中/EN(存 localStorage gemcraft.lang) -->
+<button id="langBtn" title="Language 中 / EN">EN</button>
 
 <!-- ============ 標題畫面(機台預覽動畫) ============ -->
 <div id="titleScreen">
@@ -810,18 +815,24 @@
    切割模型：凸多面體 + 半空間平面裁切（不用 voxel / CSG library）
    ============================================================ */
 
+// ---- i18n:雙語文字層(繁中預設/EN)。只動文字不動邏輯;動態字串用 tx(zh,en),
+//      靜態 HTML 用檔尾 I18N_STATIC 表,資料物件(SYSTEMS/DIAGRAMS/LAPS)加 *En 欄位 ----
+let UI_LANG=(function(){ try{ return localStorage.getItem('gemcraft.lang')==='en'?'en':'zh'; }catch(e){ return 'zh'; } })();
+function tx(zh,en){ return UI_LANG==='en'?en:zh; }
+
 // ---------- 晶系定義 ----------
 const SYSTEMS = [
-  {id:'diamond',    name:'等軸 Cubic',      gem:'鑽石',   shape:'八面體',   color:0xdce8f2, builder:buildOctahedron},
-  {id:'cubic',      name:'等軸 Cubic',      gem:'石榴石', shape:'八面體',   color:0x8a1f3a, builder:buildOctahedron},
-  {id:'tetragonal', name:'四方 Tetragonal', gem:'鋯石',   shape:'方柱+錐',  color:0xb08a3a, builder:()=>buildPrism(4,0.7,1.0,0.6)},
-  {id:'hexagonal',  name:'六方 Hexagonal',  gem:'海藍寶', shape:'六角柱',   color:0x2f7fb0, builder:()=>buildPrism(6,0.78,1.05,0.55)},
-  {id:'trigonal',   name:'三方 Trigonal',   gem:'紫水晶', shape:'六角柱',   color:0x7a3fb0, builder:()=>buildPrism(6,0.8,1.1,0.6)},
-  {id:'ortho',      name:'斜方 Orthorhombic',gem:'拓帕石', shape:'菱形柱',   color:0xc08a5a, builder:()=>buildBox(0.6,1.05,0.85,0)},
-  {id:'mono',       name:'單斜 Monoclinic', gem:'月光石', shape:'斜柱',     color:0x9aa6c0, builder:()=>buildBox(0.7,1.0,0.7,0.35)},
-  {id:'tri',        name:'三斜 Triclinic',  gem:'藍晶石', shape:'扁板狀',   color:0x3a6fc0, builder:buildTriclinic},
+  {id:'diamond',    name:'等軸 Cubic',      nameEn:'Cubic',        gem:'鑽石',   gemEn:'Diamond',    shape:'八面體',   shapeEn:'Octahedron',      color:0xdce8f2, builder:buildOctahedron},
+  {id:'cubic',      name:'等軸 Cubic',      nameEn:'Cubic',        gem:'石榴石', gemEn:'Garnet',     shape:'八面體',   shapeEn:'Octahedron',      color:0x8a1f3a, builder:buildOctahedron},
+  {id:'tetragonal', name:'四方 Tetragonal', nameEn:'Tetragonal',   gem:'鋯石',   gemEn:'Zircon',     shape:'方柱+錐',  shapeEn:'Prism + pyramid', color:0xb08a3a, builder:()=>buildPrism(4,0.7,1.0,0.6)},
+  {id:'hexagonal',  name:'六方 Hexagonal',  nameEn:'Hexagonal',    gem:'海藍寶', gemEn:'Aquamarine', shape:'六角柱',   shapeEn:'Hexagonal prism', color:0x2f7fb0, builder:()=>buildPrism(6,0.78,1.05,0.55)},
+  {id:'trigonal',   name:'三方 Trigonal',   nameEn:'Trigonal',     gem:'紫水晶', gemEn:'Amethyst',   shape:'六角柱',   shapeEn:'Hexagonal prism', color:0x7a3fb0, builder:()=>buildPrism(6,0.8,1.1,0.6)},
+  {id:'ortho',      name:'斜方 Orthorhombic',nameEn:'Orthorhombic',gem:'拓帕石', gemEn:'Topaz',      shape:'菱形柱',   shapeEn:'Rhombic prism',   color:0xc08a5a, builder:()=>buildBox(0.6,1.05,0.85,0)},
+  {id:'mono',       name:'單斜 Monoclinic', nameEn:'Monoclinic',   gem:'月光石', gemEn:'Moonstone',  shape:'斜柱',     shapeEn:'Oblique prism',   color:0x9aa6c0, builder:()=>buildBox(0.7,1.0,0.7,0.35)},
+  {id:'tri',        name:'三斜 Triclinic',  nameEn:'Triclinic',    gem:'藍晶石', gemEn:'Kyanite',    shape:'扁板狀',   shapeEn:'Flat blade',      color:0x3a6fc0, builder:buildTriclinic},
 ];
 const GEM_NAMES = ['賢者之石','虛空結晶','龍息核','星滴','深淵之瞳','逆熵之種','聖痕石','灰燼水晶'];
+const GEM_NAMES_EN = ["Philosopher's Stone",'Void Crystal','Dragonbreath Core','Stardrop','Abyssal Eye','Seed of Negentropy','Stigmata Stone','Ash Crystal'];
 
 // ---------- 切割圖紙 Faceting Diagrams ----------
 // 格式同真實 faceting diagram:每 tier = 角度 + index 位置列表(96 齒)。
@@ -830,13 +841,15 @@ const GEM_NAMES = ['賢者之石','虛空結晶','龍息核','星滴','深淵之
 // 資料約束:index 集合必須對齒 96 鏡像對稱(冠部翻面會鏡像方位 t→96−t)。
 // 桌面(角度0)自旋不影響法線 → indices:[96] + indexFree:true。
 const DIAGRAMS=[
- {id:'oct8', name:'初陽八角 · Simple Sun', fold:8, gear:96,
+ {id:'oct8', name:'初陽八角 · Simple Sun', nameEn:'Simple Sun · 17', fold:8, gear:96,
   desc:'教學用 17 刻面:亭 8 + 冠 8 + 桌面。腰稜由預成形 24 角柱保留。',
+  descEn:'Teaching cut, 17 facets: 8 pavilion + 8 crown + table. Girdle inherited from the 24-gon preform.',
   tiers:[
    {id:'P1', side:'pavilion', angle:45,  d:0.735, indices:[96,12,24,36,48,60,72,84]},
    {id:'C1', side:'crown',    angle:40,  d:0.66,  indices:[96,12,24,36,48,60,72,84]},
    {id:'T',  side:'crown',    angle:0,   d:0.30,  indices:[96], indexFree:true}]},
- {id:'srb57', name:'標準圓形明亮式 · SRB 57', fold:8, gear:96,
+ {id:'srb57', name:'標準圓形明亮式 · SRB 57', nameEn:'Standard Round Brilliant · 57', fold:8, gear:96,
+  descEn:'57 facets: pavilion mains 40.75° / lower halves 42° · crown mains 34.5° / stars 22° / upper halves 40° · table.',
   // 注意:下腰/上腰(halves)比主刻面「陡」(42>40.75、40>34.5),陡的才會只切腰圍附近、
   // 不吃底尖/桌面——角度弄反的話 halves 會整層切不到或吃掉底尖(踩過)。
   desc:'57 刻面:亭部主 40.75° / 下腰 42° · 冠部主 34.5° / 星 22° / 上腰 40° · 桌面。',
@@ -850,8 +863,9 @@ const DIAGRAMS=[
  // side:'girdle' = 垂直腰圍刀(角度90°,亭部模式下切,不翻面)——用來把 24 角柱腰圍塑成
  // 八角/三角等直邊外形。d = 目標邊心距(×R)。相鄰兩刀的交角頂點必須 < 1.0R,
  // 否則與 24 角柱側面共面(退化風險):八角 d/cos22.5°、三角 d/cos60°。
- {id:'asscher49', name:'八角階梯 · Asscher 49', fold:8, gear:96,
+ {id:'asscher49', name:'八角階梯 · Asscher 49', nameEn:'Asscher Step Cut · 49', fold:8, gear:96,
   desc:'49 刻面階梯切工:垂直腰刀塑八角 → 亭 55/42/33° 三階 · 冠 42/27° 兩階 · 桌面。',
+  descEn:'49-facet step cut: vertical girdle blades → octagon, pavilion 55/42/33°, crown 42/27°, table.',
   tiers:[
    {id:'G',  side:'girdle',   angle:90, d:0.90,  indices:[96,12,24,36,48,60,72,84]},
    {id:'P1', side:'pavilion', angle:55, d:0.754, indices:[96,12,24,36,48,60,72,84]},
@@ -860,7 +874,8 @@ const DIAGRAMS=[
    {id:'C1', side:'crown',    angle:42, d:0.625, indices:[96,12,24,36,48,60,72,84]},
    {id:'C2', side:'crown',    angle:27, d:0.533, indices:[96,12,24,36,48,60,72,84]},
    {id:'T',  side:'crown',    angle:0,  d:0.37,  indices:[96], indexFree:true}]},
- {id:'port97', name:'迴環重瓣 · Portuguese 97', fold:16, gear:96,
+ {id:'port97', name:'迴環重瓣 · Portuguese 97', nameEn:'Portuguese · 97', fold:16, gear:96,
+  descEn:'97 facets: pavilion 47/40/33° · crown 36/26/16° · table. 16-fold with staggered index rows.',
   // 16 折兩組齒位交錯(奇數×3 vs 6 的倍數,錯位 11.25°),三層由陡到緩收進底尖/桌面。
   desc:'97 刻面:亭 47/40/33° 三層 · 冠 36/26/16° 三層 · 桌面。16 折齒位逐層交錯。',
   tiers:[
@@ -871,7 +886,8 @@ const DIAGRAMS=[
    {id:'C2', side:'crown',    angle:26, d:0.529, indices:[96,6,12,18,24,30,36,42,48,54,60,66,72,78,84,90]},
    {id:'C3', side:'crown',    angle:16, d:0.492, indices:[3,9,15,21,27,33,39,45,51,57,63,69,75,81,87,93]},
    {id:'T',  side:'crown',    angle:0,  d:0.46,  indices:[96], indexFree:true}]},
- {id:'tri16', name:'三稜 · Trillion 16', fold:3, gear:96,
+ {id:'tri16', name:'三稜 · Trillion 16', nameEn:'Trillion · 16', fold:3, gear:96,
+  descEn:'16-facet triangle: vertical girdle blades → trigon, pavilion 56/38°, crown 40/25°, table.',
   // 3 折:96/3=32 齒一格,鏡像對稱(96−32=64 在集合內)。三刀垂直腰刀削出三角,削掉約七成料。
   desc:'16 刻面三角:垂直腰刀塑三角 → 亭 56/38° 兩階 · 冠 40/25° 兩階 · 桌面。',
   tiers:[
@@ -883,6 +899,10 @@ const DIAGRAMS=[
    {id:'T',  side:'crown',    angle:0,  d:0.28,  indices:[96], indexFree:true}]},
 ];
 const TIER_LABEL={pavilion:'亭', crown:'冠', girdle:'腰'};
+const TIER_LABEL_EN={pavilion:'Pav', crown:'Crn', girdle:'Gdl'};
+function tierLabel(side){ return UI_LANG==='en'?TIER_LABEL_EN[side]:TIER_LABEL[side]; }
+function dgName(def){ return UI_LANG==='en'?(def.nameEn||def.name):def.name; }
+function dgDesc(def){ return UI_LANG==='en'?(def.descEn||def.desc):def.desc; }
 
 // ============================================================
 //   多面體幾何引擎
@@ -1108,7 +1128,7 @@ function updateNavCam(){
   topCam.position.copy(axis.clone().negate().multiplyScalar(8).add(sc));
   topCam.up.copy(new THREE.Vector3(0,0,1).applyQuaternion(qStone));
   topCam.lookAt(sc.x,sc.y,sc.z);
-  if(t) t.textContent = state.crown? '⬥ 導覽器（看冠部）':'⬥ 導覽器（看亭部）';
+  if(t) t.textContent = state.crown? tx('⬥ 導覽器（看冠部）','⬥ Navigator (crown view)'):tx('⬥ 導覽器（看亭部）','⬥ Navigator (pavilion view)');
 }
 topCam.position.set(0,-8,0); topCam.up.set(0,0,-1); topCam.lookAt(0,0,0); // 靜態初始,避免 TDZ
 // 縮圖擷取+hero 展示共用 renderer(preserveDrawingBuffer 讓 toDataURL 同步可靠)
@@ -1422,10 +1442,11 @@ function tickFx(){
 //   遊戲狀態
 // ============================================================
 const LAPS=[
-  {name:'粗磨 · 260 grit', mat:()=>new THREE.MeshStandardMaterial({metalness:0.0, roughness:0.92, flatShading:true})},
-  {name:'細磨 · 1200 grit',mat:()=>new THREE.MeshStandardMaterial({metalness:0.15,roughness:0.45, flatShading:true})},
-  {name:'拋光 · 50000 鑽石粉', mat:()=>new THREE.MeshStandardMaterial({metalness:0.55,roughness:0.04, flatShading:true})},
+  {name:'粗磨 · 260 grit', nameEn:'Coarse · 260 grit', mat:()=>new THREE.MeshStandardMaterial({metalness:0.0, roughness:0.92, flatShading:true})},
+  {name:'細磨 · 1200 grit',nameEn:'Fine · 1200 grit', mat:()=>new THREE.MeshStandardMaterial({metalness:0.15,roughness:0.45, flatShading:true})},
+  {name:'拋光 · 50000 鑽石粉', nameEn:'Polish · 50k diamond', mat:()=>new THREE.MeshStandardMaterial({metalness:0.55,roughness:0.04, flatShading:true})},
 ];
+function lapName(i){ const l=LAPS[i]; return UI_LANG==='en'?(l.nameEn||l.name):l.name; }
 // ============================================================
 //   SFX:全程序化 WebAudio(無音檔=無版權問題)
 //   BGM=教堂風長音墊+隨機五聲音階鐘聲;磨石=帶通噪聲+顫抖;結算=施法琶音→收銀叮咚
@@ -1700,7 +1721,7 @@ function updateInfo(){
   const vol=solidVolume(state.solid);
   const curCarat = state.origCarat * (vol/state.origVolume);
   const facets = state.solid.faces.filter(f=>f.origin==='cut').length;
-  document.getElementById('infoSystem').textContent=state.system.name;
+  document.getElementById('infoSystem').textContent=UI_LANG==='en'?state.system.nameEn:state.system.name;
   document.getElementById('infoRough').innerHTML=state.origCarat.toFixed(1)+' <small>ct</small>';
   document.getElementById('infoCur').innerHTML=curCarat.toFixed(1)+' <small>ct</small>';
   document.getElementById('infoFacets').textContent=facets;
@@ -1724,10 +1745,10 @@ function updateSymmetry(facets){
       if(err<best.err) best={fold,err};
     }
     score=Math.max(0, 1-best.err/(360/best.fold/2));
-    label=best.fold+'折 · 偏差'+best.err.toFixed(1)+'°';
+    label=best.fold+tx('折 · 偏差','-fold · dev ')+best.err.toFixed(1)+'°';
   }
   state._symScore=score; state._symFold=cuts.length>=3?label:'—';
-  document.getElementById('symLabel').textContent=cuts.length>=3?label:'尚無切面';
+  document.getElementById('symLabel').textContent=cuts.length>=3?label:tx('尚無切面','no facets yet');
 }
 
 // ============================================================
@@ -1902,7 +1923,7 @@ expandBtn.onclick=()=>{ consoleEl.style.display='flex'; expandBtn.style.display=
 const leftToolsEl=document.getElementById('leftTools');
 document.getElementById('leftCollapseBtn').onclick=()=>{
   const on=leftToolsEl.classList.toggle('collapsed');
-  document.getElementById('leftCollapseBtn').textContent=on?'📜 展開面板':'◀ 收合面板';
+  document.getElementById('leftCollapseBtn').textContent=on?tx('📜 展開面板','📜 Show panel'):tx('◀ 收合面板','◀ Hide panel');
   coachPosition();
 };
 
@@ -1919,7 +1940,7 @@ function setLapMode(m){
     lapDisk.material.wireframe=wf; trough.material.wireframe=wf;
     lapDisk.children.forEach(r=>{ if(r.material) r.material.wireframe=wf; });
   }
-  document.getElementById('lapToggle').textContent='▦ 研磨台：'+['實體','線框','隱藏'][lapMode];
+  document.getElementById('lapToggle').textContent=tx('▦ 研磨台：','▦ Machine: ')+[tx('實體','solid'),tx('線框','wireframe'),tx('隱藏','hidden')][lapMode];
 }
 document.getElementById('lapToggle').onclick=()=>setLapMode(lapMode+1);
 
@@ -1935,10 +1956,14 @@ let tutShown=false;
 // ============================================================
 let coachShown=false, coachStep=-1;
 const COACH_STEPS=[
-  {sel:'#preformBtn', txt:'<b>① 圖紙預成形</b><br>先按這裡,把細長晶柱一鍵裁成標準規格的粗胚,指令表的角度/深度才會準。'},
-  {sel:'#dgTiers', txt:'<b>② 照順序走</b><br>指令表由上而下,點一列自動帶入角度+深度止停+翻面。'},
-  {sel:'#pressBtn', txt:'<b>③ 按住,別只點一下</b><br>按住這顆不放(滑鼠或手指壓著),深度條會自己往上爬,爬到「🛑 已達深度止停」才放開——太早放開這刀不算數。'},
-  {sel:'#nextCutBar', txt:'<b>④ 一鍵速切</b><br>同一列剩下的刀,按「⚡ 魔法陣列快切」一次切完,不用一刀一刀來。'},
+  {sel:'#preformBtn', txt:'<b>① 圖紙預成形</b><br>先按這裡,把細長晶柱一鍵裁成標準規格的粗胚,指令表的角度/深度才會準。',
+   txtEn:'<b>① Preform first</b><br>Tap this to trim the rough into a standard preform — the diagram\'s angles/depths assume it.'},
+  {sel:'#dgTiers', txt:'<b>② 照順序走</b><br>指令表由上而下,點一列自動帶入角度+深度止停+翻面。',
+   txtEn:'<b>② Follow the sheet</b><br>Work top to bottom. Tap a row to auto-load its angle + depth stop + flip.'},
+  {sel:'#pressBtn', txt:'<b>③ 按住,別只點一下</b><br>按住這顆不放(滑鼠或手指壓著),深度條會自己往上爬,爬到「🛑 已達深度止停」才放開——太早放開這刀不算數。',
+   txtEn:'<b>③ HOLD, don\'t tap</b><br>Keep it pressed (mouse or finger). The depth bar climbs on its own — release only after "🛑 Depth stop reached". Release early and the cut doesn\'t count.'},
+  {sel:'#nextCutBar', txt:'<b>④ 一鍵速切</b><br>同一列剩下的刀,按「⚡ 魔法陣列快切」一次切完,不用一刀一刀來。',
+   txtEn:'<b>④ Array cut</b><br>Finish the row\'s remaining cuts in one tap with "⚡ Magic Array Cut".'},
 ];
 function coachPosition(){
   const box=document.getElementById('coachMark');
@@ -1952,9 +1977,10 @@ function coachPosition(){
   hi.style.left=(r.left-6)+'px'; hi.style.top=(r.top-6)+'px';
   hi.style.width=(r.width+12)+'px'; hi.style.height=(r.height+12)+'px';
   document.getElementById('coachStepNo').textContent=(coachStep+1)+' / '+COACH_STEPS.length;
-  document.getElementById('coachTxt').innerHTML=step.txt;
+  document.getElementById('coachTxt').innerHTML=UI_LANG==='en'?(step.txtEn||step.txt):step.txt;
+  document.getElementById('coachSkip').textContent=tx('✕ 略過導覽','✕ Skip tour');
   document.getElementById('coachNext').textContent=
-    (coachStep>=COACH_STEPS.length-1)?'✓ 完成':'下一步 ▸';
+    (coachStep>=COACH_STEPS.length-1)?tx('✓ 完成','✓ Done'):tx('下一步 ▸','Next ▸');
   const bubble=document.getElementById('coachBubble'), bw=Math.min(270,innerWidth*0.86);
   let bx=r.right+18;
   if(bx+bw>window.innerWidth-10) bx=Math.max(10,r.left-bw-18);
@@ -2015,7 +2041,7 @@ let compassOn=false;
 document.getElementById('compassToggle').onclick=()=>{
   compassOn=!compassOn;
   document.getElementById('compass').style.display=compassOn?'block':'none';
-  document.getElementById('compassToggle').textContent='🧭 方位尺：'+(compassOn?'開':'關');
+  document.getElementById('compassToggle').textContent=tx('🧭 方位尺：','🧭 Compass: ')+(compassOn?tx('開','ON'):tx('關','OFF'));
 };
 
 // ============================================================
@@ -2036,12 +2062,12 @@ function startPress(){
   const st=document.getElementById('blindStatus');
   if(depthStopActive()){
     pressLimit=Math.max(0, maxSupport(cutNormal())-depthStopD());
-    if(st) st.textContent='定深模式 · 壓到止停會自動停住';
+    if(st) st.textContent=tx('定深模式 · 壓到止停會自動停住','Depth-stop mode · grinding halts at the stop');
   } else if(st) st.textContent='';
   pressBtn.classList.add('pressing');
   consoleEl.classList.add('pressing');   // 按壓中操作台不自動淡出
   SFX.grindStart();
-  pressBtn.querySelector('span').textContent='研磨中…（盲切）';
+  pressBtn.querySelector('span').textContent=tx('研磨中…（盲切）','Grinding… (blind cut)');
   blindOverlay.style.display='block';
 }
 function endPress(){
@@ -2050,7 +2076,7 @@ function endPress(){
   pressBtn.classList.remove('pressing');
   consoleEl.classList.remove('pressing');
   SFX.grindStop();
-  pressBtn.querySelector('span').textContent=PRESS_LABEL;
+  pressBtn.querySelector('span').textContent=pressLabel();
   blindOverlay.style.display='none';
   depthFill.style.width='0%';
   if(depthStopActive()){
@@ -2065,17 +2091,12 @@ pressBtn.addEventListener('touchstart',e=>{e.preventDefault(); startPress();},{p
 addEventListener('touchend',()=>{ if(pressing) endPress(); });
 addEventListener('touchcancel',()=>{ if(pressing) endPress(); });
 pressBtn.addEventListener('contextmenu',e=>e.preventDefault()); // Android 長按選單
-// 觸控裝置的文案(沒有「左鍵」):下壓鈕 + 教學卡的滑鼠字眼
-const PRESS_LABEL=IS_TOUCH?'按住下壓切割（鬆開揭曉）':'按住左鍵下壓切割（鬆開揭曉）';
-pressBtn.querySelector('span').textContent=PRESS_LABEL;
-if(IS_TOUCH){
-  document.querySelectorAll('#tutorial .tip').forEach(el=>{
-    el.innerHTML=el.innerHTML.replace('右鍵拖曳轉視角,滾輪縮放','單指拖曳轉視角,雙指捏合縮放');
-  });
-  document.querySelectorAll('#tutorial li').forEach(el=>{
-    el.innerHTML=el.innerHTML.replace('按住紫色大鈕','按住紫色大鈕(手指壓著)');
-  });
+// 觸控裝置的文案(沒有「左鍵」):下壓鈕;教學卡的滑鼠字眼改在 applyStaticLang 裡處理(雙語都要換)
+function pressLabel(){
+  return IS_TOUCH? tx('按住下壓切割（鬆開揭曉）','HOLD to grind (release to reveal)')
+                 : tx('按住左鍵下壓切割（鬆開揭曉）','HOLD left mouse to grind (release to reveal)');
 }
+pressBtn.querySelector('span').textContent=pressLabel();
 
 // ============================================================
 //   UI 綁定
@@ -2113,7 +2134,7 @@ document.querySelectorAll('.presetRow button').forEach(b=>{
 });
 function setCrown(c){
   state.crown=c;
-  document.getElementById('faceMode').textContent=c?'冠部 Crown':'亭部 Pavilion';
+  document.getElementById('faceMode').textContent=c?tx('冠部 Crown','Crown'):tx('亭部 Pavilion','Pavilion');
   updateNavCam();
 }
 document.getElementById('flipBtn').onclick=()=>setCrown(!state.crown);
@@ -2125,13 +2146,13 @@ document.querySelectorAll('.lapBtn').forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll('.lapBtn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active'); state.lap=+b.dataset.lap;
-    document.getElementById('phaseTag').textContent=LAPS[state.lap].name;
+    document.getElementById('phaseTag').textContent=lapName(state.lap);
     rebuildStone();
   };
 });
 
 document.getElementById('scrapBtn').onclick=()=>{
-  if(!confirm('確定報廢這顆?消耗的克拉會算進結算的浪費統計。'))return;
+  if(!confirm(tx('確定報廢這顆?消耗的克拉會算進結算的浪費統計。','Scrap this stone? Its carats count toward your waste statistics.')))return;
   session.consumedCarat += state.origCarat; session.scrapped++;
   // 廢石也拍縮圖入盤
   Vault.upsert(session.vid, session.date, stoneRecordFromState({
@@ -2140,7 +2161,7 @@ document.getElementById('scrapBtn').onclick=()=>{
   }));
   const tray=document.getElementById('scrapTray');
   const div=document.createElement('div');
-  div.textContent='✕ 殘骸 #'+session.scrapped+' — '+state.origCarat.toFixed(1)+'ct';
+  div.textContent=tx('✕ 殘骸 #','✕ Scrap #')+session.scrapped+' — '+state.origCarat.toFixed(1)+'ct';
   tray.appendChild(div);
   spawnStone(state.system);
 };
@@ -2163,9 +2184,9 @@ function updateDepthStopUI(){
   depthStopSlider.value=state.depthStopV;
   depthStopSlider.disabled=!dg.preformed;
   document.getElementById('depthStopVal').textContent=
-    state.depthStopOn? state.depthStopV.toFixed(1)+' %R':'關';
+    state.depthStopOn? state.depthStopV.toFixed(1)+' %R':tx('關','OFF');
   const tg=document.getElementById('depthStopToggle');
-  tg.textContent='🛑 止停：'+(state.depthStopOn?'開':'關');
+  tg.textContent=tx('🛑 止停：','🛑 Stop: ')+(state.depthStopOn?tx('開','ON'):tx('關','OFF'));
   tg.classList.toggle('active',state.depthStopOn);
   tg.disabled=!dg.preformed;
 }
@@ -2181,9 +2202,10 @@ function renderDiagramPanel(){
   const dg=state&&state.diagram;
   panel.style.display=dg?'block':'none';
   if(!dg) return;
-  document.getElementById('dgName').textContent='📜 '+dg.def.name;
+  document.getElementById('dgName').textContent='📜 '+dgName(dg.def);
   document.getElementById('dgHint').textContent=dg.preformed?
-    '點一列帶入角度+深度+翻面 → 轉 index → 下壓':'先按左下「✂ 圖紙預成形」做出標準粗胚';
+    tx('點一列帶入角度+深度+翻面 → 轉 index → 下壓','Tap a row to load angle+depth+flip → set index → press'):
+    tx('先按左下「✂ 圖紙預成形」做出標準粗胚','First tap "✂ Diagram preform" (bottom) to make the standard preform');
   let html='';
   for(const t of dg.def.tiers){
     const done=dg.done[t.id];
@@ -2191,10 +2213,10 @@ function renderDiagramPanel(){
     const cls='tierRow'+(dg.activeTier===t.id?' active':'')+(dg.preformed?'':' locked')
       +(done.size>=total?' full':'');
     const chips=t.indexFree?
-      `<span class="idxChip${done.size?' done':''}">桌面</span>`:
+      `<span class="idxChip${done.size?' done':''}">${tx('桌面','Table')}</span>`:
       t.indices.map(i=>`<span class="idxChip${done.has(i)?' done':''}">${i}</span>`).join('');
     html+=`<div class="${cls}" data-tier="${t.id}">
-      <div class="tierHead"><b>${t.id}</b> · ${TIER_LABEL[t.side]} ${t.angle}° · 深 ${(t.d*100).toFixed(1)}%R
+      <div class="tierHead"><b>${t.id}</b> · ${tierLabel(t.side)} ${t.angle}° · ${tx('深','d')} ${(t.d*100).toFixed(1)}%R
         <span class="tierCnt">${done.size}/${total}</span></div>
       <div class="chips">${chips}</div></div>`;
   }
@@ -2207,7 +2229,7 @@ function renderDiagramPanel(){
   const t=activeTierDef();
   const remain=t? t.indices.filter(i=>!dg.done[t.id].has(i)).length:0;
   btn.disabled=!(dg.preformed && t && remain>0);
-  btn.textContent='⚡ 魔法陣列快切'+(t&&remain>0?`（剩 ${remain} 刀）`:'');
+  btn.textContent=tx('⚡ 魔法陣列快切','⚡ Magic Array Cut')+(t&&remain>0?tx(`（剩 ${remain} 刀）`,` (${remain} left)`):'');
   if(coachStep===3 && btn.disabled) coachHide();
   coachPosition();
 }
@@ -2239,11 +2261,11 @@ function updateNextCutBar(){
   const el=document.getElementById('ncText');
   const done=dg.done[t.id];
   if(done.size>=t.indices.length){
-    el.innerHTML='<b>'+t.id+'</b> ✓ 全部完成 — 點左側下一列';
+    el.innerHTML='<b>'+t.id+'</b>'+tx(' ✓ 全部完成 — 點左側下一列',' ✓ Row complete — tap the next row');
   } else if(t.indexFree){
-    el.innerHTML='<b>'+t.id+'</b> · '+TIER_LABEL[t.side]+' '+t.angle+'° · 深 '+(t.d*100).toFixed(1)+'%R · 任意齒位,直接下壓';
+    el.innerHTML='<b>'+t.id+'</b> · '+tierLabel(t.side)+' '+t.angle+'° · '+tx('深','d')+' '+(t.d*100).toFixed(1)+'%R · '+tx('任意齒位,直接下壓','any index — just press');
   } else {
-    el.innerHTML='<b>'+t.id+'</b> · '+TIER_LABEL[t.side]+' '+t.angle+'° · 深 '+(t.d*100).toFixed(1)+'%R · 下一齒 <b class="ncIdx">'+nextTargetIndex(t,dg)+'</b>';
+    el.innerHTML='<b>'+t.id+'</b> · '+tierLabel(t.side)+' '+t.angle+'° · '+tx('深','d')+' '+(t.d*100).toFixed(1)+'%R · '+tx('下一齒','next idx')+' <b class="ncIdx">'+nextTargetIndex(t,dg)+'</b>';
   }
 }
 // 止停切割成功後:匹配 tier(側+角度±0.5°+深度±0.5%R)且 index 在表內 → 勾銷
@@ -2259,7 +2281,7 @@ function recordDiagramCut(){
   if(t.indexFree){ dg.done[t.id].add(t.indices[0]); }
   else{
     const hit=t.indices.find(i=>i%96===state.index%96);
-    if(hit===undefined){ flashWarn('⚠ 非圖紙齒位 index '+state.index+'——這刀白切了'); return; }
+    if(hit===undefined){ flashWarn(tx('⚠ 非圖紙齒位 index '+state.index+'——這刀白切了','⚠ Index '+state.index+' is not on the diagram — that cut was wasted')); return; }
     dg.done[t.id].add(hit);
   }
   renderDiagramPanel(); updateCompassTargets(); updateNextCutBar();
@@ -2352,41 +2374,59 @@ function showResult(){
     const accuracy=audit.matched/audit.total;
     completionV=completion; accuracyV=accuracy;
     gradeScore = completion*50 + accuracy*30 + Math.min(yieldPct,40)/40*20;
-    subText='圖紙：'+dg.def.name+' · '+facets+' 刻面 · '+LAPS[state.lap].name;
-    // 冷峻鑑定(佔位語氣範本,可全數替換)
+    subText=tx('圖紙：','Diagram: ')+dgName(dg.def)+' · '+facets+tx(' 刻面',' facets')+' · '+lapName(state.lap);
+    // 冷峻鑑定(佔位語氣範本,可全數替換;英文版同語氣)
     if(completion>=1 && accuracy>=0.9)
-      verdicts.push('「'+totalCuts+' 刀,一刀不缺,面差在公差內。圖紙沒有簽名欄——這是它唯一的缺陷。」');
+      verdicts.push(tx('「'+totalCuts+' 刀,一刀不缺,面差在公差內。圖紙沒有簽名欄——這是它唯一的缺陷。」',
+        '"'+totalCuts+' cuts, none missing, every facet within tolerance. The diagram has no signature line — that is its only flaw."'));
     else if(completion>=1)
-      verdicts.push('「刀數齊了。但幾何不說謊:'+(audit.total-audit.matched)+' 面偏出公差。齊數不等於齊面。」');
+      verdicts.push(tx('「刀數齊了。但幾何不說謊:'+(audit.total-audit.matched)+' 面偏出公差。齊數不等於齊面。」',
+        '"The count is complete. But geometry does not lie: '+(audit.total-audit.matched)+' facets out of tolerance. A full count is not full faces."'));
     else
-      verdicts.push('「圖紙執行率 '+(completion*100).toFixed(0)+'%('+doneCuts+'/'+totalCuts+' 刀)。缺的那幾刀不會自己長出來。」');
+      verdicts.push(tx('「圖紙執行率 '+(completion*100).toFixed(0)+'%('+doneCuts+'/'+totalCuts+' 刀)。缺的那幾刀不會自己長出來。」',
+        '"Diagram execution '+(completion*100).toFixed(0)+'% ('+doneCuts+'/'+totalCuts+' cuts). The missing ones will not grow back."'));
     if(audit.worst.dev>0)
-      verdicts.push('最大面差 '+audit.worst.dev.toFixed(1)+'°,在 '+audit.worst.tier+' 層。');
-    if(yieldPct<15) verdicts.push('成品率 '+yieldPct.toFixed(1)+'%。照圖施工還磨掉這麼多,粗胚選型的問題。');
-    else verdicts.push('成品率 '+yieldPct.toFixed(1)+'%。');
+      verdicts.push(tx('最大面差 '+audit.worst.dev.toFixed(1)+'°,在 '+audit.worst.tier+' 層。',
+        'Worst facet deviation '+audit.worst.dev.toFixed(1)+'°, at tier '+audit.worst.tier+'.'));
+    if(yieldPct<15) verdicts.push(tx('成品率 '+yieldPct.toFixed(1)+'%。照圖施工還磨掉這麼多,粗胚選型的問題。',
+        'Yield '+yieldPct.toFixed(1)+'%. Grinding away this much while following the diagram is a preform selection problem.'));
+    else verdicts.push(tx('成品率 '+yieldPct.toFixed(1)+'%。','Yield '+yieldPct.toFixed(1)+'%.'));
   } else {
     // 自由模式(原邏輯)
     gradeScore = symScore*55 + Math.min(facets,57)/57*25 + Math.min(yieldPct,40)/40*20;
     if(facets<3) gradeScore*=0.4;
-    subText='晶系：'+state.system.name+' · '+facets+' 刻面 · '+LAPS[state.lap].name;
-    if(facets<3) verdicts.push('「你這叫…拿石頭蹭了一下?連刻面都稱不上。」');
-    else if(symScore>0.8) verdicts.push('「刻面交匯乾淨,對稱在水準上。轉生不算白轉。」');
-    else if(symScore>0.5) verdicts.push('「對稱還行,但 meet point 有幾處對不上。學徒級。」');
-    else verdicts.push('「這對稱性…你是閉著眼睛切的吧。喔對,盲切。但別人也是盲切。」');
-    if(yieldPct<8) verdicts.push('成品率'+yieldPct.toFixed(1)+'%——你把整座礦山磨成粉了。');
-    else if(yieldPct<20) verdicts.push('報廢率偏高,但異世界石料不要錢,隨你糟蹋。');
-    else verdicts.push('成品率'+yieldPct.toFixed(1)+'%,留料算克制。');
-    verdicts.push(session.scrapped>0? '此石勉強可用,建議附魔補正。下次少丟幾顆。':'一次成型,沒報廢。…運氣好而已,別驕傲。');
+    subText=tx('晶系：','System: ')+(UI_LANG==='en'?state.system.nameEn:state.system.name)+' · '+facets+tx(' 刻面',' facets')+' · '+lapName(state.lap);
+    if(facets<3) verdicts.push(tx('「你這叫…拿石頭蹭了一下?連刻面都稱不上。」',
+        '"You call this… rubbing the stone against the lap? These do not qualify as facets."'));
+    else if(symScore>0.8) verdicts.push(tx('「刻面交匯乾淨,對稱在水準上。轉生不算白轉。」',
+        '"Clean meet points, symmetry up to standard. The reincarnation was not wasted."'));
+    else if(symScore>0.5) verdicts.push(tx('「對稱還行,但 meet point 有幾處對不上。學徒級。」',
+        '"Passable symmetry, but several meet points miss. Apprentice work."'));
+    else verdicts.push(tx('「這對稱性…你是閉著眼睛切的吧。喔對,盲切。但別人也是盲切。」',
+        '"This symmetry… you cut with your eyes closed, didn\'t you. Ah, right — blind cutting. Everyone else cuts blind too."'));
+    if(yieldPct<8) verdicts.push(tx('成品率'+yieldPct.toFixed(1)+'%——你把整座礦山磨成粉了。',
+        'Yield '+yieldPct.toFixed(1)+'% — you ground an entire mine into powder.'));
+    else if(yieldPct<20) verdicts.push(tx('報廢率偏高,但異世界石料不要錢,隨你糟蹋。',
+        'High scrap rate. But otherworld rough costs nothing — waste it as you please.'));
+    else verdicts.push(tx('成品率'+yieldPct.toFixed(1)+'%,留料算克制。',
+        'Yield '+yieldPct.toFixed(1)+'%. Acceptably restrained.'));
+    verdicts.push(session.scrapped>0? tx('此石勉強可用,建議附魔補正。下次少丟幾顆。',
+        'Barely serviceable; enchantment correction recommended. Scrap fewer next time.'):
+      tx('一次成型,沒報廢。…運氣好而已,別驕傲。','Formed in one pass, zero scrapped. …Luck. Don\'t let it go to your head.'));
   }
-  const grades=[[85,'大師 S','#ffd479'],[70,'職人 A','#7fe6dc'],[55,'熟練 B','#9cdcff'],
-                [40,'見習 C','#c0b0ff'],[20,'學徒 D','#c08a9a'],[0,'石匠之恥 F','#ff7a8a']];
+  const grades=UI_LANG==='en'?
+    [[85,'Master S','#ffd479'],[70,'Artisan A','#7fe6dc'],[55,'Adept B','#9cdcff'],
+     [40,'Novice C','#c0b0ff'],[20,'Apprentice D','#c08a9a'],[0,"Mason's Shame F",'#ff7a8a']]:
+    [[85,'大師 S','#ffd479'],[70,'職人 A','#7fe6dc'],[55,'熟練 B','#9cdcff'],
+     [40,'見習 C','#c0b0ff'],[20,'學徒 D','#c08a9a'],[0,'石匠之恥 F','#ff7a8a']];
   const G=grades.find(g=>gradeScore>=g[0]);
 
   // 估價
   const qFactor=dg? (gradeScore/100):symScore;
   const price=Math.round(finalCarat * (50+qFactor*180) * (facets>=3?1:0.3) * (state.lap===2?1.3:1) /10)*10;
 
-  const gname=randPick(GEM_NAMES)+' — '+state.system.gem;
+  const gi=Math.floor(Math.random()*GEM_NAMES.length);
+  const gname=(UI_LANG==='en'?GEM_NAMES_EN[gi]:GEM_NAMES[gi])+' — '+(UI_LANG==='en'?state.system.gemEn:state.system.gem);
 
   // 入盤(以 uid upsert:回去再切→再提交=覆蓋不重複)
   Vault.upsert(session.vid, session.date, stoneRecordFromState({
@@ -2400,9 +2440,9 @@ function showResult(){
   document.getElementById('rCarat').textContent=finalCarat.toFixed(2)+' ct';
   document.getElementById('rSym').textContent=(symScore*100).toFixed(0)+'% · '+(state._symFold||'—');
   const gradeEl=document.getElementById('rGrade'); gradeEl.textContent=G[1]; gradeEl.style.color=G[2];
-  document.getElementById('rConsumed').textContent=totalConsumed.toFixed(1)+' ct（含報廢 '+session.scrapped+' 顆）';
+  document.getElementById('rConsumed').textContent=totalConsumed.toFixed(1)+tx(' ct（含報廢 '+session.scrapped+' 顆）',' ct (incl. '+session.scrapped+' scrapped)');
   document.getElementById('rYield').textContent=yieldPct.toFixed(1)+' %';
-  document.getElementById('rPrice').textContent=price.toLocaleString()+' 金幣';
+  document.getElementById('rPrice').textContent=price.toLocaleString()+tx(' 金幣',' gold');
   document.getElementById('rVerdict').innerHTML=verdicts.join('<br>');
   document.getElementById('resultScreen').style.display='flex';
   renderResultScoop();
@@ -2464,8 +2504,9 @@ function renderResultScoop(){
   const box=document.getElementById('rScoopStones');
   if(!stage||!box) return;
   if(!stage.querySelector('.scoopSvg')) stage.insertAdjacentHTML('afterbegin', scoopSVG());
-  document.getElementById('rScoopDate').textContent=session.date+' · 今日盤 '+
-    (Vault.data.sessions.find(s=>s.id===session.vid)||{stones:[]}).stones.length+' 顆';
+  const scoopN=(Vault.data.sessions.find(s=>s.id===session.vid)||{stones:[]}).stones.length;
+  document.getElementById('rScoopDate').textContent=session.date+tx(' · 今日盤 '," · today's scoop: ")+
+    scoopN+tx(' 顆', scoopN===1?' stone':' stones');
   const s=Vault.data.sessions.find(x=>x.id===session.vid);
   box.innerHTML=s? stonePileHTML(s.stones, state.uid, false):'';
 }
@@ -2491,7 +2532,7 @@ function renderGallery(){
   const sessions=Vault.data.sessions.slice().sort((a,b)=>b.ts-a.ts);
   const total=Vault.count();
   document.getElementById('gStats').textContent=
-    total? (total+' 顆 · '+sessions.length+' 爐'+(Vault.ok?'':' · ⚠ 儲存不可用')):'還沒有石頭——去切一顆';
+    total? (total+tx(' 顆 · ', total===1?' stone · ':' stones · ')+sessions.length+tx(' 爐', sessions.length===1?' batch':' batches')+(Vault.ok?'':tx(' · ⚠ 儲存不可用',' · ⚠ storage unavailable'))):tx('還沒有石頭——去切一顆','No stones yet — go cut one');
   let html='';
   for(const s of sessions){
     const best=s.stones.filter(g=>!g.scrapped).sort((a,b)=>b.gradeScore-a.gradeScore)[0];
@@ -2499,11 +2540,11 @@ function renderGallery(){
     html+=`<div class="scoopCard">
       <div class="scDate">${s.date}</div>
       <div class="scStage">${scoopSVG()}<div class="scStones">${stonePileHTML(s.stones,null,true)}</div></div>
-      <div class="scMeta">${s.stones.length} 顆（廢 ${s.stones.filter(g=>g.scrapped).length}）
-        · 最佳 ${best?best.grade:'—'} · 合計 ${gold.toLocaleString()} 金幣</div>
+      <div class="scMeta">${s.stones.length}${tx(' 顆（廢 ',' stones (scrapped ')}${s.stones.filter(g=>g.scrapped).length}${tx('）',')')}
+        · ${tx('最佳','best')} ${best?best.grade:'—'} · ${tx('合計','total')} ${gold.toLocaleString()}${tx(' 金幣',' gold')}</div>
     </div>`;
   }
-  grid.innerHTML=html||'<div class="hint" style="grid-column:1/-1; padding:40px;">空空如也。切出第一顆再來。</div>';
+  grid.innerHTML=html||('<div class="hint" style="grid-column:1/-1; padding:40px;">'+tx('空空如也。切出第一顆再來。','Empty. Cut your first stone and come back.')+'</div>');
   grid.querySelectorAll('.scoopStone[data-gid]').forEach(el=>{
     el.onclick=()=>openStoneDetail(el.dataset.gid);
   });
@@ -2511,17 +2552,18 @@ function renderGallery(){
 function openStoneDetail(id){
   const f=Vault.find(id); if(!f) return;
   const g=f.g;
-  document.getElementById('sdName').textContent=(g.name||'未命名原石')+(g.scrapped?'（廢案）':'');
+  document.getElementById('sdName').textContent=(g.name||tx('未命名原石','Unnamed rough'))+(g.scrapped?tx('（廢案）',' (scrapped)'):'');
   document.getElementById('sdThumb').src=g.thumb||'';
+  const dgDef=g.diagramId? DIAGRAMS.find(d=>d.id===g.diagramId):null;
   const rows=[
-    ['日期', f.s.date],['評級', g.grade+(g.gradeScore?('（'+g.gradeScore+' 分）'):'')],
-    ['重量', g.carat+' ct'],['刻面', g.facets],
-    ['對稱性', (g.sym*100).toFixed(0)+'%'],
-    ['圖紙', g.diagramId? (DIAGRAMS.find(d=>d.id===g.diagramId)||{name:g.diagramId}).name:'自由切割'],
+    [tx('日期','Date'), f.s.date],[tx('評級','Grade'), g.grade+(g.gradeScore?(tx('（'+g.gradeScore+' 分）',' ('+g.gradeScore+' pts)')):'')],
+    [tx('重量','Weight'), g.carat+' ct'],[tx('刻面','Facets'), g.facets],
+    [tx('對稱性','Symmetry'), (g.sym*100).toFixed(0)+'%'],
+    [tx('圖紙','Diagram'), g.diagramId? (dgDef?dgName(dgDef):g.diagramId):tx('自由切割','Free cutting')],
   ];
-  if(g.completion!=null) rows.push(['圖紙執行率', (g.completion*100).toFixed(0)+'%']);
-  if(g.accuracy!=null) rows.push(['幾何準確度', (g.accuracy*100).toFixed(0)+'%']);
-  rows.push(['估價', (g.price||0).toLocaleString()+' 金幣']);
+  if(g.completion!=null) rows.push([tx('圖紙執行率','Execution'), (g.completion*100).toFixed(0)+'%']);
+  if(g.accuracy!=null) rows.push([tx('幾何準確度','Accuracy'), (g.accuracy*100).toFixed(0)+'%']);
+  rows.push([tx('估價','Appraisal'), (g.price||0).toLocaleString()+tx(' 金幣',' gold')]);
   document.getElementById('sdParams').innerHTML=rows.map(r=>
     `<div class="statLine"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('');
   const favBtn=document.getElementById('sdFav');
@@ -2553,7 +2595,7 @@ document.getElementById('importFile').onchange=e=>{
   rd.onload=()=>{
     try{
       const d=JSON.parse(rd.result);
-      if(!d || d.v!==1 || !Array.isArray(d.sessions)) throw new Error('不是本遊戲的存檔格式');
+      if(!d || d.v!==1 || !Array.isArray(d.sessions)) throw new Error(tx('不是本遊戲的存檔格式','not a save file from this game'));
       let n=0;
       for(const s of d.sessions) for(const g of (s.stones||[])){
         const sess=Vault.session('s_'+s.date, s.date);
@@ -2561,8 +2603,8 @@ document.getElementById('importFile').onchange=e=>{
       }
       Vault.mergeByDate(); Vault.trim(Vault.MAX_STONES); Vault.save();
       renderGallery();
-      alert('匯入完成:新增 '+n+' 顆(重複的自動跳過)');
-    }catch(err){ alert('匯入失敗:'+err.message); }
+      alert(tx('匯入完成:新增 '+n+' 顆(重複的自動跳過)','Import done: '+n+' stones added (duplicates skipped)'));
+    }catch(err){ alert(tx('匯入失敗:','Import failed: ')+err.message); }
   };
   rd.readAsText(file);
   e.target.value='';
@@ -2578,8 +2620,8 @@ function buildSystemCards(){
   SYSTEMS.forEach(sys=>{
     const c=document.createElement('button'); c.className='sysCard';
     const hex='#'+sys.color.toString(16).padStart(6,'0');
-    c.innerHTML=`<div class="sys"><span class="swatch" style="background:${hex}"></span>${sys.name}</div>
-      <div class="gem">代表：${sys.gem}</div><div class="shape">原石：${sys.shape}</div>`;
+    c.innerHTML=`<div class="sys"><span class="swatch" style="background:${hex}"></span>${UI_LANG==='en'?sys.nameEn:sys.name}</div>
+      <div class="gem">${tx('代表：','e.g. ')}${UI_LANG==='en'?sys.gemEn:sys.gem}</div><div class="shape">${tx('原石：','Rough: ')}${UI_LANG==='en'?sys.shapeEn:sys.shape}</div>`;
     c.onclick=()=>{ newSession(); spawnStone(sys);
       document.getElementById('selectScreen').style.display='none';
       document.getElementById('hud').style.display='block';
@@ -2605,13 +2647,13 @@ function spawnStone(sys){
     }
   }
   document.getElementById('preformBtn').textContent=
-    state.diagram?'✂ 圖紙預成形（標準粗胚）':'✂ 預成形（裁短粗胚）';
+    state.diagram?tx('✂ 圖紙預成形（標準粗胚）','✂ Diagram preform (standard)'):tx('✂ 預成形（裁短粗胚）','✂ Preform (trim rough)');
   // 重置 UI
   angleSlider.value=43; document.getElementById('angleVal').textContent='43';
   setIndex(96);
   setActiveFold(null); state._fold=null; updateCompassFold(null);
-  document.getElementById('faceMode').textContent='亭部 Pavilion';
-  document.getElementById('phaseTag').textContent=LAPS[0].name;
+  document.getElementById('faceMode').textContent=tx('亭部 Pavilion','Pavilion');
+  document.getElementById('phaseTag').textContent=lapName(0);
   document.querySelectorAll('.lapBtn').forEach((x,i)=>x.classList.toggle('active',i===0));
   renderDiagramPanel(); updateDepthStopUI(); updateCompassTargets(); updateNextCutBar();
   updateNavCam();
@@ -2640,9 +2682,10 @@ document.getElementById('titleScreen').onclick=()=>{
 };
 dop.visible=false; // 標題畫面藏遊戲自己的 dop(修浮空 bug)
 
-// 標題字逐字放大進場(動漫式砸字)
-(function(){
+// 標題字逐字放大進場(動漫式砸字);語言切換會重跑
+function renderTitle(){
   const el=document.querySelector('.tsTitle'); if(!el) return;
+  el.textContent=tx('✦ 異世界魔法石工坊 ✦','✦ Isekai Gemcraft ✦');
   const txt=el.textContent; el.textContent='';
   Array.from(txt).forEach((ch,i)=>{
     const s=document.createElement('span');
@@ -2650,7 +2693,127 @@ dop.visible=false; // 標題畫面藏遊戲自己的 dop(修浮空 bug)
     s.style.animationDelay=(0.15+i*0.09).toFixed(2)+'s';
     el.appendChild(s);
   });
-})();
+}
+renderTitle();
+
+// ============================================================
+//   i18n:靜態 HTML 語言表 + 語言切換(檔頭有 UI_LANG/tx)
+//   zh 原文以 HTML 為準(首次套用時快取),en 在下表;切換時動態文字各自重刷
+// ============================================================
+const I18N_STATIC=[
+  ['.tsSub','異世界魔法石工坊 — real faceting · blind cuts · chuuni appraisal'],
+  ['.tsHint','— click anywhere to enter the workshop —'],
+  ['#selectScreen .title h1','✦ Isekai Gemcraft ✦'],
+  ['#selectScreen .title p','Pick a crystal system → real faceting mechanics → chuuni appraisal. Cuts reveal blind. No undo.'],
+  ['.diagCard[data-diag="free"] .recBadge','🔥 Hard Mode'],
+  ['.diagCard[data-diag="free"] .dcText','Free Cutting<small>no diagram · pure blind cuts · zero guardrails</small>'],
+  ['.diagCard[data-diag="oct8"] .recBadge','⭐ Start Here'],
+  ['.diagCard[data-diag="oct8"] .dcText','Simple Sun<small>tutorial diagram · 17 facets · quick run</small>'],
+  ['.diagCard[data-diag="srb57"] .dcText','Round Brilliant · 57<small>SRB · the classic diamond cut · challenge</small>'],
+  ['.diagCard[data-diag="asscher49"] .dcText','Asscher Step · 49<small>step cut · girdle blades · intermediate</small>'],
+  ['.diagCard[data-diag="port97"] .dcText','Portuguese · 97<small>16-fold · 3 staggered rows · most facets · hard</small>'],
+  ['.diagCard[data-diag="tri16"] .dcText','Trillion · 16<small>3-fold triangle · burns 70% rough · quick</small>'],
+  ['#galleryBtn','🧺 Gem Collection'],
+  ['#selectScreen .hint','Pick a crystal system — it decides the rough shape; carats roll 25–40 ct.<br>Diagram = build to a real faceting chart (angle + index + depth stop); Free = raw blind-cut feel.'],
+  ['#topbar .stoneInfo .k',['System','Rough','Current','Facets']],
+  ['#navTitle','⬥ Navigator (pavilion view)'],
+  ['#topviewWrap div.label[style]','Symmetry · <span id="symLabel">—</span>'],
+  ['#helpBtn','❔ Tutorial / How to play'],
+  ['#tintBtn','🎨 Enchant Tint'],
+  ['#collapseBtn','▼ Hide console'],
+  ['#console .ctrlRow .ctrlGroup:nth-child(1) > label','Angle Protractor <b><span id="angleVal">43</span>°</b>'],
+  ['#console .ctrlRow .ctrlGroup:nth-child(2) > label','Index <b><span id="indexDeg">0</span>° azimuth (96-tooth)</b>'],
+  ['.presetRow button[data-fold]',['8-fold','16-fold','4-fold','6-fold']],
+  ['#depthStopGroup > label','Depth stop Mast <b><span id="depthStopVal">OFF</span></b>'],
+  ['#console .ctrlRow .ctrlGroup:nth-child(4) > label:nth-of-type(1)','Cut side <b id="faceMode">Pavilion</b>'],
+  ['#flipBtn','Flip ⟳ crown / pavilion'],
+  ['#console .ctrlRow .ctrlGroup:nth-child(4) > label:nth-of-type(2)','Lap wheel'],
+  ['.lapBtn',['Coarse','Fine','Polish']],
+  ['#scrapBtn','✕ Scrap stone, new rough'],
+  ['#resetView','↺ Reset view'],
+  ['#submitBtn','⚖ Submit for appraisal →'],
+  ['#expandBtn','▲ Show console'],
+  ['#blindOverlay .center > div:nth-child(2)','G R I N D I N G …'],
+  ['#blindOverlay .center > div:nth-child(5)','Longer press = deeper cut · and you can\'t see it'],
+  ['.tutCard h2','✦ 3-Minute Primer: you are the cutter, not the audience'],
+  ['.tutCard .lead','Real faceting: the stone presses tilted against a horizontal lap — angle and index decide every cut.'],
+  ['.tutCard ol li',[
+    '<b>① Preform</b>: fresh crystals come long and thin. Hit "✂ Preform" (bottom-left) to trim a squat blank.',
+    '<b>② Set the angle</b>: drag the Protractor slider — <b>the stone tilts with it</b>. Pavilion mains ≈43°, girdle 90°.',
+    '<b>③ Set the index</b>: a 96-tooth gear. Use ◄►, or <b>8-fold/16-fold</b> to jump between symmetric positions — <b>the stone spins</b>, the dial shows azimuth.',
+    '<b>④ Blind press</b>: hold the big purple button. The view is masked — <b>longer press cuts deeper</b>. Release to reveal.',
+    '<b>⑤ Swap laps</b>: coarse → fine → polish; facets go from frosted to mirror.',
+    '<b>⑥ Submit</b>: the otherworld master appraises (sharp tongue included) and prices it. Scrap and retry anytime — carats are counted.',
+    '<b>📜 Diagram mode</b>: if you picked a diagram — tap a row in the left sheet to load angle + depth stop, turn to the gold-ring index, press to the stop. Finish the chart and you have executed a real cut design.']],
+  ['.tutCard .tip','The top-right Navigator looks down the stone\'s axis — use it to judge facet symmetry.<br>If the machine blocks your view, the "Machine" button (top-left) switches wireframe / hidden. Right-drag to orbit, scroll to zoom.'],
+  ['#tutClose','Start cutting →'],
+  ['#rHeroWrap .statLine .k',['Weight','Symmetry','Cutter grade','Rough consumed','Yield','Otherworld appraisal']],
+  ['#backToCut','← Not satisfied, keep cutting'],
+  ['#toGalleryBtn','🧺 Collection'],
+  ['#newSession','⟳ New batch'],
+  ['#galleryScreen .gHead h2','🧺 Gem Collection'],
+  ['#exportBtn','⬇ Export save'],
+  ['#importBtn','⬆ Import save'],
+  ['#galleryClose','← Back'],
+  ['#stoneDetail .hint','Only a thumbnail snapshot + parameters are saved — the 3D model cannot be rebuilt'],
+  ['#sdClose','Close'],
+];
+let _i18nZh=null;
+function applyStaticLang(){
+  if(!_i18nZh){ // 首次:快取 HTML 內的繁中原文(在觸控字眼替換之前)
+    _i18nZh=I18N_STATIC.map(([sel,en])=>{
+      if(Array.isArray(en)) return [...document.querySelectorAll(sel)].map(el=>el.innerHTML);
+      const el=document.querySelector(sel); return el?el.innerHTML:null;
+    });
+  }
+  I18N_STATIC.forEach(([sel,en],i)=>{
+    if(Array.isArray(en)){
+      [...document.querySelectorAll(sel)].forEach((el,j)=>{
+        const v=UI_LANG==='en'?en[j]:(_i18nZh[i]||[])[j];
+        if(v!=null) el.innerHTML=v;
+      });
+    }else{
+      const el=document.querySelector(sel); if(!el||_i18nZh===null) return;
+      const v=UI_LANG==='en'?en:_i18nZh[i];
+      if(v!=null) el.innerHTML=v;
+    }
+  });
+  if(IS_TOUCH){ // 教學卡滑鼠字眼 → 觸控字眼(兩種語言各自替換)
+    const pairs=UI_LANG==='en'?
+      [['Right-drag to orbit, scroll to zoom','One-finger drag to orbit, pinch to zoom'],
+       ['hold the big purple button','hold the big purple button (keep pressing)']]:
+      [['右鍵拖曳轉視角,滾輪縮放','單指拖曳轉視角,雙指捏合縮放'],
+       ['按住紫色大鈕','按住紫色大鈕(手指壓著)']];
+    document.querySelectorAll('#tutorial .tip, #tutorial li').forEach(el=>{
+      pairs.forEach(p=>{ el.innerHTML=el.innerHTML.replace(p[0],p[1]); });
+    });
+  }
+}
+function applyLang(){
+  try{ localStorage.setItem('gemcraft.lang', UI_LANG); }catch(e){}
+  document.getElementById('langBtn').textContent = UI_LANG==='en'?'中':'EN';
+  applyStaticLang();
+  renderTitle();
+  document.getElementById('systemGrid').innerHTML=''; buildSystemCards(); // 晶系卡換語言重生
+  // 動態文字依現況重刷(邏輯不動,只重寫 label)
+  document.getElementById('compassToggle').textContent=tx('🧭 方位尺：','🧭 Compass: ')+(compassOn?tx('開','ON'):tx('關','OFF'));
+  setLapMode(lapMode); // 同值重套=只刷新研磨台鈕文字
+  const lc=document.getElementById('leftCollapseBtn');
+  lc.textContent=leftToolsEl.classList.contains('collapsed')?tx('📜 展開面板','📜 Show panel'):tx('◀ 收合面板','◀ Hide panel');
+  if(!pressing) pressBtn.querySelector('span').textContent=pressLabel();
+  if(state){
+    document.getElementById('angleVal').textContent=state.angle;
+    updateInfo(); renderDiagramPanel(); updateNextCutBar(); updateDepthStopUI(); updateCompassTargets();
+    document.getElementById('faceMode').textContent=state.crown?tx('冠部 Crown','Crown'):tx('亭部 Pavilion','Pavilion');
+    document.getElementById('phaseTag').textContent=lapName(state.lap);
+    document.getElementById('preformBtn').textContent=
+      state.diagram?tx('✂ 圖紙預成形（標準粗胚）','✂ Diagram preform (standard)'):tx('✂ 預成形（裁短粗胚）','✂ Preform (trim rough)');
+    updateNavCam(); // 連帶刷新導覽器標題
+  }
+  coachPosition();
+}
+document.getElementById('langBtn').onclick=()=>{ UI_LANG=(UI_LANG==='en')?'zh':'en'; applyLang(); };
+applyLang(); // 載入時套用(zh=快取原文+觸控字眼;en=整包換)
 
 // ============================================================
 //   #dev 校準工具:gemcraft.html#dev 開啟後 console 用
@@ -2714,7 +2877,7 @@ function animate(){
       pressDepth=pressLimit;
       if(!stopReached){ stopReached=true;
         const st=document.getElementById('blindStatus');
-        if(st) st.textContent='🛑 已達深度止停 — 鬆手收刀';
+        if(st) st.textContent=tx('🛑 已達深度止停 — 鬆手收刀','🛑 Depth stop reached — release to finish the cut');
       }
     }
     const frac=(pressDepth/MAX_DEPTH*100).toFixed(0)+'%';

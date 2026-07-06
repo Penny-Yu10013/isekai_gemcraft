@@ -116,6 +116,12 @@
   - **左欄收合**(`#leftCollapseBtn`,手機版才顯示):「◀ 收合面板」⇄「📜 展開面板」,收起時 `#leftTools.collapsed > *:not(#leftCollapseBtn){display:none !important}` 藏掉教學/研磨台/附魔/指令表整欄(`!important` 蓋得過 JS 寫的 inline display),看石頭不擋視線。
   - **coachmark 框選偏移+卡步驟**:根因是 `coachPosition()` 只在 resize/收合時重算,手機上指令表捲動、iOS 工具列縮放、預成形後面板長高都會讓金框停在舊位置 → ①導覽顯示中改 **每 250ms setInterval 跟刷**(任何漂移 0.25 秒內歸位);②泡泡加「**下一步 ▸**」鈕(末步變「✓ 完成」),手動推進不再依賴玩家做對動作才前進(用戶建議的形式);③`coachShow` 先把目標 `scrollIntoView` 再定位;④窄螢幕兩側塞不下泡泡時改放目標正下方/上方,不蓋住要點的元素。注意 `#coachHi` 有 0.25s CSS transition,程式讀 highlight 位置要等過渡完。
   - 全流程手機重測:①→②→③→④ 金框全部貼合目標、下一步/完成可點、左欄收展正常;桌面(>720px)迴歸無變化(左欄鈕隱藏、操作台鈕維持浮動)。
+- [x] **中英雙語切換(i18n)+ 開源推廣配套**(2026-07 第八輪,for 英文推特/介紹/影片推廣):
+  - **架構**(零邏輯改動,只動文字層):①動態字串 → `tx(zh,en)` 雙語內聯 helper(檔頭宣告 `UI_LANG`,約 40 處呼叫點:結算毒舌/勾銷警告/nextCutBar/羅盤/盲切/蒐集頁/詳情/confirm/alert 全含);②靜態 HTML → 檔尾 `I18N_STATIC` 選擇器表(~55 條,zh 原文首次套用時從 HTML 快取,所以**繁中以 HTML 為準**、英文在表裡);③資料物件 → `SYSTEMS`(nameEn/gemEn/shapeEn)、`DIAGRAMS`(nameEn/descEn)、`LAPS`(nameEn)、`GEM_NAMES_EN`、`TIER_LABEL_EN`(Pav/Crn/Gdl),取用走 `dgName()/dgDesc()/lapName()/tierLabel()` helper。
+  - **切換**:`#langBtn`(主題鈕右邊/手機左下直排第三顆,顯示目標語言「EN/中」),`applyLang()` 即時切換=靜態表重套+標題重拆字(`renderTitle`)+晶系卡重生+各動態 label 依現況重刷;存 `localStorage gemcraft.lang`,預設繁中。
+  - **陷阱備忘**:教學卡的觸控字眼替換(右鍵→單指)整合進 `applyStaticLang`,兩種語言各有替換對(EN 文案必須含 'Right-drag to orbit, scroll to zoom' 和 'hold the big purple button' 原句才替換得到);`PRESS_LABEL` 常數改成 `pressLabel()` 函式;毒舌鑑定英文版同冷峻語氣(佔位語氣範本,可全數替換);蒐集頁存檔內的石頭名稱存的是「當時語言」的字串,舊資料照原樣顯示不轉換。
+  - **驗收**:繁中預設像素級不變;EN 全畫面走過(標題/選石/教學/coach/切割 HUD/指令表/結算/蒐集);遊戲中即時雙向切換各 label 全部跟上;五份圖紙 `#dev` 回歸 100%;console 零錯誤。
+  - **開源配套**:`README.md` 改英文主體(Play Now 連結/特色/凸多面體裁切技術段/貢獻指引/授權註記——**程式碼授權未定**,icon 是 JewelCraft GPL-3.0,要開源前用戶得先裁定授權);`CONTRIBUTING.md`(英文,自足版新增切型指南:格式+d 公式+五硬檢查+96 齒對稱規則+`__diag` 驗收清單+PR 格式);`.github/ISSUE_TEMPLATE/` 兩個表單(New Diagram Request 含折數下拉與拉長外形防呆勾選、Bug Report 含「真破面 vs 切得醜」區分)。
 - [x] **亮色玻璃主題(Apple 風 liquid-glass)+ 明暗切換**(2026-07 第六輪):`#themeBtn`(🌙/☀️,`sndBtn` 右邊)一鍵切,存 `localStorage gemcraft.theme`,預設暗色。**只換 UI 外殼**,3D 切割場景(教堂光/霧/暗角/導覽器小視窗/hero 旋轉視窗)刻意維持原樣不動(用戶裁定範圍)。實作方式:整包疊在 `html[data-theme="light"]` 選擇器裡,一行都沒改原本的暗色規則本身——靠選擇器優先度覆蓋,零迴歸風險(已截圖比對確認暗色主題像素級不變)。分兩層:①核心變數(`--panel/--line/--accent/--accent2/--text/--dim/--warn/--gold`)重新賦值,套用到所有原本就用 `var()` 的規則(按鈕文字/邊框/hint 等大部分自動吃到);②約 20 條寫死 hex 顏色的規則(sysCard/diagCard/tierRow/idxChip/結算卡/教學卡/蒐集頁等)逐一加 `html[data-theme="light"] 選擇器{}` 明版覆蓋。**踩過的坑**:沒包在 `.panel`(沒有自己 `backdrop-filter`)、直接浮在 3D 場景上的裸 `button`(左側 `#leftTools` 三顆、`#tintRow`、`#coachBubble`)一開始只換了半透明白底沒加 blur,亮背景會把文字洗到快看不見——後來在 `html[data-theme="light"] button` 統一補 `backdrop-filter:blur(14px) saturate(160%)` 才解決;已包在 `.panel` 裡的子元素(console 內按鈕、tierRow 在 diagramPanel 裡)不需要自己 blur,吃父層的就夠。大面板(`.panel`/結算卡/蒐集頁/教學遮罩)用 `blur(22px) saturate(180%)`。
 
 ---
@@ -182,6 +188,7 @@
 | 教學卡 | HTML `#tutorial`、`helpBtn`/`tutClose` |
 | **魔法快切導覽(coachmark)** | `COACH_STEPS`、`coachShow`/`coachHide`/`coachPosition`、HTML `#coachMark` |
 | **亮色玻璃主題 / 明暗切換** | CSS `html[data-theme="light"]` 區塊(疊加,不改暗色原規則)、JS `applyTheme`、HTML `#themeBtn` |
+| **中英雙語(i18n)** | 檔頭 `UI_LANG`/`tx(zh,en)`、檔尾 `I18N_STATIC` 表+`applyStaticLang`/`applyLang`、`#langBtn`;資料欄位 `nameEn/descEn/gemEn/shapeEn`、helper `dgName/dgDesc/lapName/tierLabel`;**加新 UI 文字一律走 tx() 或 I18N_STATIC,別寫死單語** |
 | 對稱性評分 | `updateSymmetry` |
 | **機台模型載入/換裝/動態** | `loadMachine`、`setupMachine`(lapSpin/quillPark/gearSpin 分組)、`tickMachine`、`PARK_ANGLE` |
 | **氛圍(教堂環境/霧氣/光柱)** | `makeEnvScene`/`makeEnvTexture`(彩窗 envMap——**金屬材質全靠它亮**,別刪)、`fxGroup`/`tickFx`(乾冰霧+god rays)、CSS `#vignette`、`scene.fog` |

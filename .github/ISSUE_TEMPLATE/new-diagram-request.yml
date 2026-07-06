@@ -1,0 +1,59 @@
+name: "💎 New Diagram Request"
+description: Propose a new faceting diagram (cut design) for the diagram library
+title: "[Diagram] "
+labels: ["diagram", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want to cut it yourself? Diagrams are data-only contributions — see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
+        This template is for requesting/proposing a design.
+  - type: input
+    id: name
+    attributes:
+      label: Diagram name
+      description: e.g. "French Cut", "Hexagon Step"
+      placeholder: French Cut · 25
+    validations:
+      required: true
+  - type: dropdown
+    id: fold
+    attributes:
+      label: Fold symmetry
+      description: Must divide 96 (the index gear). 5-fold / 7-fold are impossible on this gear.
+      options: ["2", "3", "4", "6", "8", "12", "16", "24", "32", "48"]
+    validations:
+      required: true
+  - type: input
+    id: facets
+    attributes:
+      label: Approximate facet count
+      placeholder: "25"
+  - type: textarea
+    id: source
+    attributes:
+      label: Source / reference
+      description: |
+        Link to a published faceting chart (e.g. GemologyProject) or state it's an original design.
+        ⚠ If transcribed from a published diagram, confirm the license allows reuse.
+      placeholder: https://www.gemologyproject.com/wiki/...
+    validations:
+      required: true
+  - type: textarea
+    id: tiers
+    attributes:
+      label: Tier table (if known)
+      description: "One tier per line: side / angle / index positions"
+      placeholder: |
+        P1  pavilion  55°  96,12,24,36,48,60,72,84
+        C1  crown     42°  96,12,24,36,48,60,72,84
+        T   crown      0°  table
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraint check
+      options:
+        - label: The outline is equant (round / square / triangle …) — NOT elongated (oval / pear / marquise need per-index depths, which the engine's data model can't express)
+          required: true
+        - label: Every tier's index set is mirror-symmetric under t → 96−t
+          required: false
