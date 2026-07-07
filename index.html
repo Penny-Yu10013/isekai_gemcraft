@@ -111,6 +111,7 @@
   .reveal.in .feat{opacity:1; transform:none;}
   .reveal.in .feat:nth-child(2){transition-delay:.15s;}
   .reveal.in .feat:nth-child(3){transition-delay:.3s;}
+  .reveal.in .feat:nth-child(4){transition-delay:.45s;}
 
   /* 特色卡 hover 紫金光暈 */
   .feat{transition:box-shadow .35s ease, transform .35s ease, border-color .35s ease;}
@@ -437,7 +438,7 @@
   </section>
 
   <section class="reveal">
-    <h2>Real machine, real cuts, no undo</h2>
+    <h2>Real machine, real cuts, mostly permanent</h2>
     <div class="featGrid">
       <!-- 卡1:盲切 → 斬擊+玻璃碎裂(hover/點擊/進場觸發) -->
       <div class="feat panel fxCard" id="fxCut">
@@ -452,7 +453,7 @@
           <i class="sp" style="--dx:-10px;--dy:32px;  left:52%; top:60%;"></i>
         </div>
         <div class="ico">🗡</div><h3>Blind cutting</h3>
-        <p>The view masks while you grind. Longer press cuts deeper — you only see the result after you release. Every cut is permanent.</p>
+        <p>The view masks while you grind. Longer press cuts deeper — you only see the result after you release.</p>
       </div>
       <!-- 卡2:圖紙 → 異世界演算公式橫向漂流(常駐,hover 增亮;內容=引擎真公式) -->
       <div class="feat panel fxCard" id="fxRunes">
@@ -475,6 +476,11 @@
         </div>
         <div class="ico">⚖</div><h3>Overdramatic appraisal</h3>
         <p>An otherworld master grades your symmetry, yield and diagram accuracy — with a professionally sharp tongue. Every stone joins your collection tray.</p>
+      </div>
+      <!-- 卡4:時間魔法回溯,把「no undo」改動說清楚——有限、不是萬能 -->
+      <div class="feat panel">
+        <div class="ico">👁</div><h3>Time-magic rewind</h3>
+        <p>Every stone carries exactly 3 rewinds. Each one makes the last cut "never observed" — a narrow, sci-fi-flavored mercy for the one time you fat-finger the depth stop. Burn through all three and the simulator goes back to remembering everything.</p>
       </div>
     </div>
   </section>
@@ -509,6 +515,10 @@
       computed exactly: <b>no voxels, no CSG library, no mesh booleans</b>. Facets stay perfectly planar at any
       count (the Portuguese cut runs 121 faces), and re-cutting the same plane removes nothing — which is precisely
       the property that makes depth-stop faceting and one-tap symmetric array cuts work, same as on a physical machine.</p>
+    <p>Every diagram ships with a built-in <code>#dev</code> console auditor: it re-derives each facet's expected
+      normal and plane distance straight from the diagram's own angle/index/depth table, then diffs that against the
+      actual cut geometry. All five built-in diagrams report a <b>100% facet match at 0.0° deviation</b> — not
+      "close enough," exact.</p>
     <p>The cut plane is always "world down"; the stone's tilt and index spin are quaternions, and the plane is
       transformed into stone-local coordinates. Real-time <b>convex clipping</b>, procedural gemstone faceting,
       computational geometry in the browser — in <b>one HTML file</b> with Three.js r128. View source, it's all there.</p>
