@@ -136,6 +136,7 @@
 
 - [x] **時間魔法回溯「未觀測的一刀」**(2026-07,受試者2號手機實測回饋:誤把長按當拋光,把成形的石頭磨沒了):每顆石頭 **3 次**回溯(用戶裁定:次數3/名稱「未觀測的一刀」/手機只留圖示)。快照=`cloneSolid` 石頭幾何+圖紙狀態(R/preformed/activeTier/done Set 深拷貝),掛在四個切割類動作前:盲切 `endPress`(止停與自由兩路)、`arrayCutBtn`(**整批算一步**)、`preform`、`preformDiagram`;機台設定(角度/index/翻面)不回溯——魔法只作用在石頭上。堆疊留最近 8 步。UI=操作台第 5 個 ctrlGroup(`#undoGroup`),grid 排版下自由模式正好落在翻面鈕右側空格、圖紙模式落在止停鈕下方(位置=受試者兩張截圖裁定);手機 `.undoTxt` 藏字只留 ⏪+次數。用後按鈕閃「那一刀,未被觀測…」1.6s(`undoFxTimer`),音效借 `SFX.enchant`。i18n:按鈕/label 走 `updateUndoUI`(applyLang 會重呼),label 另有 I18N_STATIC 條目(applyLang 順序:先套表再 updateUndoUI 修正次數)。選石畫面文案「不可 Undo」→「時間魔法只有 3 次」(zh HTML+EN 表都改了)。驗證:自由模式 3 刀 3 回溯克拉數精確還原、第 4 次被擋;圖紙模式回溯陣列快切=整批消失+勾銷還原、再回溯連預成形都退掉、重做後稽核 17/17;EN/zh 雙向切換;五份圖紙迴歸 100%。
 - [x] **in-app 瀏覽器貼底 UI 被裁切修正**(同輪,受試者 LINE/Messenger WebView 截圖:下壓鈕被切一半、左下圓鈕半沉):根因=這類 WebView 的 layout viewport 比實際可視區高,而 `#hud`/`#titleScreen`/`#selectScreen`/`#galleryScreen` 都是 absolute inset:0 → 錨在 ICB(layout viewport),左下三顆圓鈕是 fixed 同理,貼底的東西全沉到可視區外。修法=`@supports (height:100svh)` 區塊:`html,body{height:100svh}`+`body{position:relative}`(absolute 整頁畫面改掛 body=可視高)+三顆圓鈕 fixed→absolute;`#console` 手機 max-height 加 `52svh` 檔(橫向 70svh)。桌面與一般瀏覽器 svh≈100vh 零影響(已截圖迴歸)。**preview 模擬不了 in-app chrome,真機效果要等受試者回測**;若還裁,下一步是 JS 用 `visualViewport.height` 寫 CSS 變數。
+- [x] **`#pressBtn` 文字被裁切,真正根因找到了(2026-07 第十輪)**:上面那條 svh 修法只解決了 in-app WebView 視口的部分,**同個「下壓鈕被切一半」症狀在一般瀏覽器窄視窗/手機直向也會重現**(用戶自己拿手機+桌面縮窄視窗雙重驗證),跟 in-app chrome 無關。真正原因是經典 flexbox 陷阱:`#pressBtn` 有 `overflow:hidden`(為了裁 `#depthFill` 進度條不溢出圓角),而 flex item 只要 `overflow` 不是 `visible`,它的 automatic minimum size 就會失效(`min-height:auto` 形同 `min-height:0`)——`#console` 手機版是 `overflow-y:auto` 的 flex column,內容一旦逼近 `max-height`,其他沒有 `overflow:hidden` 的子項(`.ctrlRow`/`.actionRow`/`#nextCutBar`)都有內容自撐的最小高度保護,只有 `#pressBtn` 沒有保護,於是全部的擠壓量都吃在它一個身上,被壓到只剩 ~24px(遠小於文字需要的行高),文字就從這個扁掉的盒子上下溢出,看起來像「被切一半」。**修法**:`#pressBtn` 加一行 `flex-shrink:0`(在基礎規則裡,不分 media query 全通用)。已用 375×812 直向、900×400 橫短兩種視口都驗證:按鈕維持自然高度(~43.6px)、文字完整,`#console` 該滾動的地方正常出現捲軸吃掉多的高度,不再犧牲按鈕。
 
 ---
 
@@ -196,6 +197,7 @@
 | 盲切手感 | `startPress`/`endPress`、`MAX_DEPTH`、`DEPTH_RATE`、`animate` 裡的深度條 |
 | **時間魔法回溯(未觀測的一刀)** | `snapshotStone`/`undoCut`/`updateUndoUI`、HTML `#undoGroup`(操作台第 5 格);快照鉤子在 `endPress`/`arrayCutBtn`/`preform`/`preformDiagram`;次數在 `spawnStone` 的 `state.undoLeft=3` |
 | **in-app WebView 視口修正** | CSS `@supports (height:100svh)` 區塊(html/body 高+body relative+左下三鈕改 absolute)、`#console` 的 `52svh` 檔 |
+| **下壓鈕窄視窗被裁切(flex 擠壓 bug)** | `#pressBtn` 的 `flex-shrink:0`(根因:`overflow:hidden` 讓 flex item 失去自動最小高度保護,被 `#console` 的 `overflow-y:auto` 擠壓吃掉) |
 | index / 折數 / 錶盤 | `setIndex`、`.presetRow` 的 onclick、`setActiveFold` |
 | 方位尺羅盤 | `compassXY`(逆時針座標 helper,四件套共用)、`buildCompass`、`updateCompassNeedle`(rotate(−deg))、`updateCompassFold`、`updateCompassTargets`(金環);校準脈絡見第 4 節 |
 | 導覽器相機 | `topCam`、`updateNavCam` |
