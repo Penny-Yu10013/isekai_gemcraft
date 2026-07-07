@@ -5,9 +5,9 @@ Real faceting-machine mechanics — tilt angle × index gear × depth stop — d
 
 **▶ [Play Now](https://penny-yu10013.github.io/isekai_gemcraft/)** — desktop & mobile (portrait), English / 繁體中文 (toggle in-game, bottom-left)
 
-<!-- screenshot placeholder: title screen (machine idle animation) -->
-<!-- screenshot placeholder: cutting view with diagram panel -->
-<!-- screenshot placeholder: appraisal card with hero stone -->
+![Isekai Gemcraft — magical faceting machine](assets/shot_title.jpg)
+![White diamond Asscher step cut hovering over the lap](assets/shot_asscher.jpg)
+![Purple Portuguese cut gemstone above the grinding lap](assets/shot_port97.jpg)
 
 ## What is this?
 
@@ -15,13 +15,13 @@ You are the cutter, not the audience. Pick a crystal system, mount the rough on 
 
 - **Tilt** the stone with the protractor (0–90°) — the stone tilts live
 - **Rotate** to a symmetry position on the 96-tooth index gear
-- **Press** — blind: the view masks while you grind, longer press cuts deeper, release to reveal. No undo.
+- **Press** — blind: the view masks while you grind, longer press cuts deeper, release to reveal. Each stone carries 3 time-magic rewinds ("that cut was never observed") — burn through those and every cut after is permanent.
 - **Depth stop** (mast height analog): grinding halts at the exact target plane; re-cutting the same setting removes nothing — that's how the symmetry math works on real machines too
 - Swap laps (coarse → fine → polish), then submit for an **overdramatic otherworld appraisal** (sharp tongue included)
 
 ### Faceting diagrams
 
-Five built-in cut designs executed like real faceting charts (angle + index + depth per tier), with a guided instruction sheet, target-index compass rings, and one-tap symmetric array cutting:
+Five built-in cut designs executed like real faceting charts (angle + index + depth per tier), with a guided instruction sheet, target-index compass rings, one-tap symmetric array cutting, and a first-time walkthrough that advances with your actual clicks instead of a slideshow:
 
 | Diagram | Facets | Symmetry | Difficulty |
 |---|---|---|---|
@@ -31,14 +31,15 @@ Five built-in cut designs executed like real faceting charts (angle + index + de
 | Portuguese | 97 | 16-fold, staggered rows | hard |
 | Trillion | 16 | 3-fold | quick |
 
-Free-cutting mode (no diagram, zero guardrails) is there for purists.
+Free-cutting mode (no diagram, zero guardrails, 🔥 hardcore badge included) is there for purists.
 
 ### Also inside
 
 - Top-view **navigator** with live n-fold symmetry analysis
 - **Gem collection**: every stone (including scrapped ones) gets a thumbnail snapshot, scooped into a daily tray; ⭐ favorites, JSON export/import
+- **Enchant / tint**: 18 gem colors, including 6 two-tone gradients (ametrine, bicolor tourmaline…) with adjustable gradient direction, plus a manual scene-brightness slider (40–150%) for when a pale tint blows out under the cathedral lighting
 - Procedurally generated faceting machine (Blender-scripted GLB, base64-embedded), fully animated title scene
-- 100% procedural WebAudio (BGM, grinding, appraisal chimes) — zero audio files
+- 100% procedural WebAudio (BGM, grinding, appraisal chimes, spellcast sparkle for array cuts) — zero audio files
 - Dark cathedral / light liquid-glass themes; full touch support on mobile
 
 ## How it works (the interesting part)
