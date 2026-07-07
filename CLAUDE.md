@@ -137,10 +137,10 @@
 
 ## 4. 待確認 / 已知小問題
 
-- **方位尺金針的轉向與零點**：直接用 index 角度畫的,跟 3D 石頭視覺旋轉方向**可能左右相反或差一個 offset**。需實際比對。要修的話改 `updateCompassNeedle(deg)` 的 deg 正負或加常數;`buildCompass()` 是度數環,`updateCompassFold()` 是青點。**羅盤目標齒位(`updateCompassTargets`)刻意用同一套 `(t%96)*3.75` 慣例**,就算整體鏡像,金環跟金針永遠相對一致——要校正就一起改。
+- ~~方位尺金針的轉向與零點~~ **已校準**(2026-07 實測+修正):原本確實**鏡像且有偏移**——把「index t 的刻面切完後在導覽器畫面上的實際方位」投影到 topCam 螢幕座標實測,亭部 actual=270−deg、冠部 actual=90−deg(deg=t×3.75,金針卻畫在 +deg)。修法兩件一組:①`updateNavCam` 的 `topCam.up` 從石頭局部 +Z 改 **−X**(實測這個軸讓亭/冠兩側都變成 actual=−deg,同一公式不用分支);②羅盤四件套(度數環/金針/青點/金環)全改**逆時針刻度**,共用新 helper `compassXY(deg,r)`,金針 `rotate(−deg)`——從研磨台側(下方)看石頭,方位天生鏡像,逆時針才是物理正確。驗證:螢幕投影數值全對齊(亭/冠各 4 個 index)+垂直腰刀直邊視覺比對(金針正指切出的平邊)+五份圖紙 `#dev` 迴歸 100%、偏差 0°。**注意**:console 的 index 小錶盤 `#idxNeedle` 仍順時針——它代表機台分度輪(機構示意),不是畫面空間,刻意不同步;導覽器畫面因 up 軸換了會比舊版整體轉 90°(純視覺,無存檔參照)。
 - `clipSolid` / `stitchLoop` 的極端切法破面風險(見 2.1)。SRB 57 面 + 24 腰稜(81 面)壓測通過,沒破面。**圖紙模式風險趨近於零**(角度/深度/index 都鎖在表定值,等於全跑過壓測);**自由切割沒有這層保護**——玩家可以用任意角度+任意深度連續下壓,沒人校過那個組合空間,是「破圖」回報最可能的來源(2026-07 用戶朋友玩舊版時發生)。目前只做了 UX 層防呆:選石畫面自由切割卡加「🔥匠人精神」警示角標(`.hardBadge`,見選石畫面 `#diagramRow` 第一張卡)區分於圖紙的「⭐推薦入門」,提示新手不要預設選它;**幾何層本身沒加防呆**,真的極端切法(例如同角度貼著切到只剩極薄一層)理論上仍可能讓 `stitchLoop` 縫不出封閉面。若之後再收到破圖回報,先問清楚是「幾何真的破洞/面缺角」還是「只是切得對稱很差、形狀很醜」——只有前者才是這裡要查的 bug。
 - 結算估價/評級公式是隨手抓的(`showResult()` 裡),數值平衡沒調過。圖紙模式成品率天生偏低(預成形吃掉很多料,約 10–15%),評語 <15% 那句會常駐,要嫌煩就調門檻。
-- 圖紙模式的深度止停滑桿玩家可以手動亂調(離開表定值),切了照樣不勾銷——是特性不是 bug(機器不會救你),但沒有明確提示為什麼沒打勾。
+- 圖紙模式的深度止停滑桿玩家可以手動亂調(離開表定值),切了照樣不勾銷——是特性不是 bug(機器不會救你)。**提示已補**(2026-07):`recordDiagramCut` 對不上任何 tier 時 `flashWarn`「⚠ 角度或止停深度不在圖紙表定值——這刀不計入圖紙(點 tier 列可自動帶入)」;成功勾銷時 `clearWarn()` 立即清掉殘留警告(不等 2.5s 淡出)。
 - `preformDiagram()` 假設原石對 y=0 上下大致對稱(現有 8 個 builder 都滿足);之後若加不對稱原石要回頭看腰圍定位(`c=0.25R` 那段)。
 - **非圓截面原石的 R 陷阱**(鑽石/石榴石踩過):八面體水平截面是方形,「整體最小徑向支撐」≠「腰圍平面實際內半徑」,R 抓太大會讓冠部整層落空、成品破碎。`preformDiagram` 現在會切腰圍薄片量實際內半徑,短缺就縮 R 迭代重做(最多 3 輪)。八大晶系 × SRB57 已全掃 57/57。
 - **hero/縮圖過曝**:shotR 掛 ACESFilmic tone mapping(exposure 0.85)+上下雙 DirectionalLight;白鑽這種淺色石驗過 0% 飽和像素。
@@ -183,7 +183,7 @@
 | **圖紙資料(加新圖紙改這)** | `DIAGRAMS` 陣列(格式與陷阱見 2.6;完整方法論見 `新增切型指南.md`)+ 選石畫面 `#diagramRow` 加卡 |
 | **圖紙預成形 / 標準粗胚 R** | `preformDiagram`(24 角柱、腰圍 y=0、`state.diagram.R`) |
 | **深度止停** | `depthStopActive`/`depthStopD`/`updateDepthStopUI`、`startPress` 的 `pressLimit`、`animate` 的 clamp |
-| **指令表面板 / tier 帶入 / 勾銷** | `renderDiagramPanel`、`activateTier`、`recordDiagramCut`、`flashWarn` |
+| **指令表面板 / tier 帶入 / 勾銷** | `renderDiagramPanel`、`activateTier`、`recordDiagramCut`、`flashWarn`/`clearWarn` |
 | **陣列快切** | `#arrayCutBtn` 的 onclick |
 | **圖紙結算稽核** | `auditDiagram`、`showResult` 的 `dg` 分支 |
 | **#dev 校準工具** | 檔尾 `location.hash.includes('dev')` 區塊(`__diag.run`/`__diag.dump`) |
@@ -191,7 +191,7 @@
 | 石頭外觀/材質/lap 階段 | `LAPS`、`rebuildStone`、`buildGeometry` |
 | 盲切手感 | `startPress`/`endPress`、`MAX_DEPTH`、`DEPTH_RATE`、`animate` 裡的深度條 |
 | index / 折數 / 錶盤 | `setIndex`、`.presetRow` 的 onclick、`setActiveFold` |
-| 方位尺羅盤 | `buildCompass`、`updateCompassNeedle`、`updateCompassFold`、`updateCompassTargets`(金環) |
+| 方位尺羅盤 | `compassXY`(逆時針座標 helper,四件套共用)、`buildCompass`、`updateCompassNeedle`(rotate(−deg))、`updateCompassFold`、`updateCompassTargets`(金環);校準脈絡見第 4 節 |
 | 導覽器相機 | `topCam`、`updateNavCam` |
 | 結算 / 評分 / 估價 / 毒舌 | `showResult`、`GEM_NAMES` |
 | 教學卡 | HTML `#tutorial`、`helpBtn`/`tutClose` |

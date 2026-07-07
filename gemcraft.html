@@ -1135,7 +1135,9 @@ function updateNavCam(){
   const axis=new THREE.Vector3(0,1,0).applyQuaternion(qRig);
   const sc=new THREE.Vector3(0,(typeof STONE_Y_OFF!=='undefined'?STONE_Y_OFF:0),0);
   topCam.position.copy(axis.clone().negate().multiplyScalar(8).add(sc));
-  topCam.up.copy(new THREE.Vector3(0,0,1).applyQuaternion(qStone));
+  // up=石頭局部 −X:實測(2026-07)這個軸讓「index t 的刻面」在畫面上落在方位 −t*3.75°,
+  // 亭/冠兩側同一公式,配合羅盤逆時針刻度(見 buildCompass)金針才會指向實際刻面
+  topCam.up.copy(new THREE.Vector3(-1,0,0).applyQuaternion(qStone));
   topCam.lookAt(sc.x,sc.y,sc.z);
   if(t) t.textContent = state.crown? tx('⬥ 導覽器（看冠部）','⬥ Navigator (crown view)'):tx('⬥ 導覽器（看亭部）','⬥ Navigator (pavilion view)');
 }
@@ -2019,30 +2021,31 @@ window.addEventListener('resize',coachPosition);
 setInterval(()=>{ if(coachStep>=0) coachPosition(); },250);
 
 // 導覽器方位尺(羅盤)
+// ⚠ 刻度是「逆時針增加」:從研磨台側(下方)看石頭,方位天生鏡像,
+//   實測 index t 的刻面落在畫面方位 −t*3.75°(topCam.up=局部−X 校準,見 updateNavCam)。
+//   金針/度數環/青點/金環四者共用 compassXY/−deg 慣例,要改就一起改。
+function compassXY(deg,r){ const rad=deg*Math.PI/180; return [118-r*Math.sin(rad), 118-r*Math.cos(rad)]; }
 function buildCompass(){
   const st=document.getElementById('compassStatic'); if(!st) return;
-  const cx=118, cy=118; let html='';
+  let html='';
   for(let d=0; d<360; d+=15){
     const maj=(d%45===0);
-    const r1=112, r2=maj?96:104, rad=d*Math.PI/180;
-    const x1=cx+r1*Math.sin(rad), y1=cy-r1*Math.cos(rad);
-    const x2=cx+r2*Math.sin(rad), y2=cy-r2*Math.cos(rad);
+    const [x1,y1]=compassXY(d,112), [x2,y2]=compassXY(d,maj?96:104);
     html+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="${maj?'tickMaj':'tick'}"/>`;
-    if(maj){ const rl=84, xl=cx+rl*Math.sin(rad), yl=cy-rl*Math.cos(rad);
+    if(maj){ const [xl,yl]=compassXY(d,84);
       html+=`<text x="${xl.toFixed(1)}" y="${yl.toFixed(1)}">${d}</text>`; }
   }
   st.innerHTML=html;
 }
 function updateCompassNeedle(deg){
   const n=document.getElementById('compassNeedle');
-  if(n) n.setAttribute('transform',`rotate(${deg} 118 118)`);
+  if(n) n.setAttribute('transform',`rotate(${-deg} 118 118)`);
 }
 function updateCompassFold(fold){
   const g=document.getElementById('compassFold'); if(!g) return;
   if(!fold){ g.innerHTML=''; return; }
-  const cx=118,cy=118,r=112; let html='';
-  for(let k=0;k<fold;k++){ const d=k*360/fold, rad=d*Math.PI/180;
-    const x=cx+r*Math.sin(rad), y=cy-r*Math.cos(rad);
+  let html='';
+  for(let k=0;k<fold;k++){ const [x,y]=compassXY(k*360/fold,112);
     html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" class="foldDot"/>`; }
   g.innerHTML=html;
 }
@@ -2286,17 +2289,25 @@ function recordDiagramCut(){
   const t=dg.def.tiers.find(t=>(t.side===side||(t.side==='girdle'&&side==='pavilion'))
     && Math.abs(t.angle-state.angle)<=0.5
     && Math.abs(t.d*dg.R-dT)<=0.005*dg.R);
-  if(!t) return;
+  if(!t){ // 角度或止停深度被手動調離表定值:照切但不計入圖紙,講清楚為什麼沒打勾
+    flashWarn(tx('⚠ 角度或止停深度不在圖紙表定值——這刀不計入圖紙(點 tier 列可自動帶入)',
+      '⚠ Angle or depth stop is off the chart — cut not recorded (click a tier row to auto-set)'));
+    return; }
   if(t.indexFree){ dg.done[t.id].add(t.indices[0]); }
   else{
     const hit=t.indices.find(i=>i%96===state.index%96);
     if(hit===undefined){ flashWarn(tx('⚠ 非圖紙齒位 index '+state.index+'——這刀白切了','⚠ Index '+state.index+' is not on the diagram — that cut was wasted')); return; }
     dg.done[t.id].add(hit);
   }
+  clearWarn(); // 成功勾銷就把殘留的警告清掉,不等 2.5s 淡出
   renderDiagramPanel(); updateCompassTargets(); updateNextCutBar();
   if(coachStep===2) coachShow(3);
 }
 let warnTimer=null;
+function clearWarn(){
+  const w=document.getElementById('dgWarn'); if(!w) return;
+  clearTimeout(warnTimer); w.textContent='';
+}
 function flashWarn(msg){
   const w=document.getElementById('dgWarn'); if(!w) return;
   w.textContent=msg; clearTimeout(warnTimer);
@@ -2310,10 +2321,9 @@ function updateCompassTargets(){
   if(!dg||!t||t.indexFree){ g.innerHTML=''; return; }
   const done=dg.done[t.id];
   const next=nextTargetIndex(t,dg);
-  const cx=118,cy=118,r=104; let html='';
+  let html='';
   for(const i of t.indices){
-    const deg=(i%96)*3.75, rad=deg*Math.PI/180;
-    const x=cx+r*Math.sin(rad), y=cy-r*Math.cos(rad);
+    const [x,y]=compassXY((i%96)*3.75,104);
     const cls='tgtDot'+(done.has(i)?' tgtDone':(i===next?' tgtNext':''));
     html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i===next?6:4.5}" class="${cls}"/>`;
   }
