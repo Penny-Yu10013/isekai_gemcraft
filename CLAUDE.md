@@ -44,6 +44,7 @@
 
 ### 2.3 盲切
 按住下壓鈕時畫面遮蔽(看不到切到哪),深度條隨按住時間長,鬆開才套用切割並揭曉。`MAX_DEPTH`/`DEPTH_RATE` 控制壓深速度。
+2026-07 起有**時間魔法「未觀測的一刀」**:每顆石頭 3 次回溯(受試者2號誤把長按當拋光磨掉整顆石頭的回饋),用完回到不可返回的硬派本色——次數上限是張力保護,不要調成無限。
 
 ### 2.4 反覆踩到的 JS 雷:TDZ(暫時死區)
 `let state=null;` 宣告在腳本中段。**任何在它之前就被呼叫、且讀取 `state` 的函式都會整支腳本報錯**(然後選石卡都生不出來,畫面卡在標題)。
@@ -133,6 +134,9 @@
   - **開源配套**:`README.md` 改英文主體(Play Now 連結/特色/凸多面體裁切技術段/貢獻指引);**授權已裁定 GPL-3.0**(2026-07 用戶定案,LICENSE=官方全文,gemcraft.html 檔頭有版權聲明,CONTRIBUTING 明訂貢獻同授權,與 JewelCraft icon 的 GPL-3.0 相容);`CONTRIBUTING.md`(英文,自足版新增切型指南:格式+d 公式+五硬檢查+96 齒對稱規則+`__diag` 驗收清單+PR 格式);`.github/ISSUE_TEMPLATE/` 兩個表單(New Diagram Request 含折數下拉與拉長外形防呆勾選、Bug Report 含「真破面 vs 切得醜」區分)。
 - [x] **亮色玻璃主題(Apple 風 liquid-glass)+ 明暗切換**(2026-07 第六輪):`#themeBtn`(🌙/☀️,`sndBtn` 右邊)一鍵切,存 `localStorage gemcraft.theme`,預設暗色。**只換 UI 外殼**,3D 切割場景(教堂光/霧/暗角/導覽器小視窗/hero 旋轉視窗)刻意維持原樣不動(用戶裁定範圍)。實作方式:整包疊在 `html[data-theme="light"]` 選擇器裡,一行都沒改原本的暗色規則本身——靠選擇器優先度覆蓋,零迴歸風險(已截圖比對確認暗色主題像素級不變)。分兩層:①核心變數(`--panel/--line/--accent/--accent2/--text/--dim/--warn/--gold`)重新賦值,套用到所有原本就用 `var()` 的規則(按鈕文字/邊框/hint 等大部分自動吃到);②約 20 條寫死 hex 顏色的規則(sysCard/diagCard/tierRow/idxChip/結算卡/教學卡/蒐集頁等)逐一加 `html[data-theme="light"] 選擇器{}` 明版覆蓋。**踩過的坑**:沒包在 `.panel`(沒有自己 `backdrop-filter`)、直接浮在 3D 場景上的裸 `button`(左側 `#leftTools` 三顆、`#tintRow`、`#coachBubble`)一開始只換了半透明白底沒加 blur,亮背景會把文字洗到快看不見——後來在 `html[data-theme="light"] button` 統一補 `backdrop-filter:blur(14px) saturate(160%)` 才解決;已包在 `.panel` 裡的子元素(console 內按鈕、tierRow 在 diagramPanel 裡)不需要自己 blur,吃父層的就夠。大面板(`.panel`/結算卡/蒐集頁/教學遮罩)用 `blur(22px) saturate(180%)`。
 
+- [x] **時間魔法回溯「未觀測的一刀」**(2026-07,受試者2號手機實測回饋:誤把長按當拋光,把成形的石頭磨沒了):每顆石頭 **3 次**回溯(用戶裁定:次數3/名稱「未觀測的一刀」/手機只留圖示)。快照=`cloneSolid` 石頭幾何+圖紙狀態(R/preformed/activeTier/done Set 深拷貝),掛在四個切割類動作前:盲切 `endPress`(止停與自由兩路)、`arrayCutBtn`(**整批算一步**)、`preform`、`preformDiagram`;機台設定(角度/index/翻面)不回溯——魔法只作用在石頭上。堆疊留最近 8 步。UI=操作台第 5 個 ctrlGroup(`#undoGroup`),grid 排版下自由模式正好落在翻面鈕右側空格、圖紙模式落在止停鈕下方(位置=受試者兩張截圖裁定);手機 `.undoTxt` 藏字只留 ⏪+次數。用後按鈕閃「那一刀,未被觀測…」1.6s(`undoFxTimer`),音效借 `SFX.enchant`。i18n:按鈕/label 走 `updateUndoUI`(applyLang 會重呼),label 另有 I18N_STATIC 條目(applyLang 順序:先套表再 updateUndoUI 修正次數)。選石畫面文案「不可 Undo」→「時間魔法只有 3 次」(zh HTML+EN 表都改了)。驗證:自由模式 3 刀 3 回溯克拉數精確還原、第 4 次被擋;圖紙模式回溯陣列快切=整批消失+勾銷還原、再回溯連預成形都退掉、重做後稽核 17/17;EN/zh 雙向切換;五份圖紙迴歸 100%。
+- [x] **in-app 瀏覽器貼底 UI 被裁切修正**(同輪,受試者 LINE/Messenger WebView 截圖:下壓鈕被切一半、左下圓鈕半沉):根因=這類 WebView 的 layout viewport 比實際可視區高,而 `#hud`/`#titleScreen`/`#selectScreen`/`#galleryScreen` 都是 absolute inset:0 → 錨在 ICB(layout viewport),左下三顆圓鈕是 fixed 同理,貼底的東西全沉到可視區外。修法=`@supports (height:100svh)` 區塊:`html,body{height:100svh}`+`body{position:relative}`(absolute 整頁畫面改掛 body=可視高)+三顆圓鈕 fixed→absolute;`#console` 手機 max-height 加 `52svh` 檔(橫向 70svh)。桌面與一般瀏覽器 svh≈100vh 零影響(已截圖迴歸)。**preview 模擬不了 in-app chrome,真機效果要等受試者回測**;若還裁,下一步是 JS 用 `visualViewport.height` 寫 CSS 變數。
+
 ---
 
 ## 4. 待確認 / 已知小問題
@@ -190,6 +194,8 @@
 | 傾斜/自旋/翻面 | `rigQuaternion`、`stoneQuaternion`、`expectedNormal`、`setCrown`、`updateNavCam` |
 | 石頭外觀/材質/lap 階段 | `LAPS`、`rebuildStone`、`buildGeometry` |
 | 盲切手感 | `startPress`/`endPress`、`MAX_DEPTH`、`DEPTH_RATE`、`animate` 裡的深度條 |
+| **時間魔法回溯(未觀測的一刀)** | `snapshotStone`/`undoCut`/`updateUndoUI`、HTML `#undoGroup`(操作台第 5 格);快照鉤子在 `endPress`/`arrayCutBtn`/`preform`/`preformDiagram`;次數在 `spawnStone` 的 `state.undoLeft=3` |
+| **in-app WebView 視口修正** | CSS `@supports (height:100svh)` 區塊(html/body 高+body relative+左下三鈕改 absolute)、`#console` 的 `52svh` 檔 |
 | index / 折數 / 錶盤 | `setIndex`、`.presetRow` 的 onclick、`setActiveFold` |
 | 方位尺羅盤 | `compassXY`(逆時針座標 helper,四件套共用)、`buildCompass`、`updateCompassNeedle`(rotate(−deg))、`updateCompassFold`、`updateCompassTargets`(金環);校準脈絡見第 4 節 |
 | 導覽器相機 | `topCam`、`updateNavCam` |

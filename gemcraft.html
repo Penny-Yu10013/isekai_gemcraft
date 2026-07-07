@@ -450,6 +450,15 @@
   #pressBtn{touch-action:none; -webkit-user-select:none;}
   button, input[type=range]{touch-action:manipulation;} /* 殺雙擊縮放與 300ms 延遲 */
   body{-webkit-tap-highlight-color:transparent; overscroll-behavior:none;}
+  /* in-app 瀏覽器(LINE/Messenger WebView)修正:layout viewport 常比實際可視區高,
+     貼底 UI(下壓鈕/左下圓鈕/操作台)會被裁到看不見 → 全頁改用 svh(最小可視高)錨定。
+     桌面與一般瀏覽器 svh≈100% 零影響。body 加 position:relative 讓 absolute inset:0
+     的整頁畫面(#hud/#titleScreen/#selectScreen/#galleryScreen)掛在 body(可視高)而非 layout viewport */
+  @supports (height:100svh){
+    html,body{height:100svh;}
+    body{position:relative;}
+    #sndBtn,#themeBtn,#langBtn{position:absolute;} /* 原 fixed 錨 layout viewport,改錨 body */
+  }
   @media (hover:none){
     /* 觸控裝置沒有 hover,操作台淡出邏輯改常駐微透明(收合鈕仍可整個藏掉) */
     #console:not(:hover){opacity:.92;}
@@ -481,7 +490,10 @@
     #scrapTray{display:none;}
     /* 操作台:滿版貼底,左邊留音效/主題鈕的走道 */
     #console{left:56px; right:8px; bottom:8px; width:auto;
-      padding:8px 10px 10px; gap:6px; max-height:56vh; overflow-y:auto;}
+      padding:8px 10px 10px; gap:6px; max-height:56vh; max-height:52svh; overflow-y:auto;}
+    /* 回溯鈕手機只留圖示(用戶裁定),字藏掉 */
+    #undoGroup .undoTxt{display:none;}
+    #undoGroup button{font-size:16px;}
     /* 收合鈕收進排版流第一列(原本 top:-14 突出面板,會被 overflow-y:auto 裁掉點不到) */
     #collapseBtn{position:static; order:-1; align-self:flex-end;
       margin:-2px -2px 0 0; padding:6px 14px; font-size:12px;}
@@ -535,7 +547,7 @@
   @media (min-width:721px) and (max-height:540px){
     #topviewWrap{width:170px; padding:8px;}
     #topviewCanvas,.navStage,#compass{width:150px; height:150px;}
-    #console{max-height:76vh; overflow-y:auto; padding:8px 12px; gap:6px;}
+    #console{max-height:76vh; max-height:70svh; overflow-y:auto; padding:8px 12px; gap:6px;}
     #leftTools{top:70px; gap:6px;}
     #leftTools button{font-size:11px; padding:6px 8px;}
     #diagramPanel{max-height:36vh;}
@@ -568,7 +580,7 @@
 <div id="selectScreen" style="display:none;">
   <div class="title">
     <h1>✦ 異世界魔法石工坊 ✦</h1>
-    <p>選擇晶系 → 真實切割機制 → 中二鑑定。盲切揭曉,不可 Undo。</p>
+    <p>選擇晶系 → 真實切割機制 → 中二鑑定。盲切揭曉,時間魔法只有 3 次。</p>
   </div>
   <div class="systemGrid" id="systemGrid"></div>
   <div id="diagramRow">
@@ -684,6 +696,10 @@
           <button class="lapBtn" data-lap="1">細磨</button>
           <button class="lapBtn" data-lap="2">拋光</button>
         </div>
+      </div>
+      <div class="ctrlGroup" id="undoGroup">
+        <label>時間魔法 Rewind <b id="undoLeft">×3</b></label>
+        <button id="undoBtn" disabled>⏪ <span class="undoTxt">未觀測的一刀</span></button>
       </div>
     </div>
 
@@ -1802,6 +1818,7 @@ function preform(){
   }
   const H=rmax*0.95;                 // 目標半高 ≈ 半徑
   if(ymax<=H+0.05) return;           // 已經夠矮
+  snapshotStone();
   let s=clipSolid(state.solid,[0,1,0],H);
   if(s) s=clipSolid(s,[0,-1,0],H);
   if(s){ state.solid=s; rebuildStone(); }
@@ -1816,6 +1833,7 @@ function cloneSolid(s){
 }
 function preformDiagram(){
   if(!state||!state.diagram||state.diagram.preformed) return;
+  snapshotStone();
   const SIDES=24;
   const orig=cloneSolid(state.solid);
   let ymin=1e9,ymax=-1e9;
@@ -2092,9 +2110,9 @@ function endPress(){
   blindOverlay.style.display='none';
   depthFill.style.width='0%';
   if(depthStopActive()){
-    if(stopReached){ cutAtPlane(cutNormal(), depthStopD()); recordDiagramCut(); }
-    else if(pressDepth>0.025){ doCut(pressDepth); } // 提早鬆手=淺切,不勾銷
-  } else if(pressDepth>0.025){ doCut(pressDepth); }
+    if(stopReached){ snapshotStone(); cutAtPlane(cutNormal(), depthStopD()); recordDiagramCut(); }
+    else if(pressDepth>0.025){ snapshotStone(); doCut(pressDepth); } // 提早鬆手=淺切,不勾銷
+  } else if(pressDepth>0.025){ snapshotStone(); doCut(pressDepth); }
 }
 pressBtn.addEventListener('mousedown',e=>{e.preventDefault(); startPress();});
 addEventListener('mouseup',()=>{ if(pressing) endPress(); });
@@ -2109,6 +2127,57 @@ function pressLabel(){
                  : tx('按住左鍵下壓切割（鬆開揭曉）','HOLD left mouse to grind (release to reveal)');
 }
 pressBtn.querySelector('span').textContent=pressLabel();
+
+// ============================================================
+//   時間魔法「未觀測的一刀」:每顆石頭 3 次回溯
+//   快照=石頭幾何+圖紙勾銷狀態,在每個「切割類動作」前拍(盲切/陣列快切/預成形)
+//   機台設定(角度/index/翻面)不回溯——魔法只作用在石頭上
+// ============================================================
+let undoFxTimer=null;
+function snapshotStone(){
+  if(!state) return;
+  const snap={solid:cloneSolid(state.solid), diag:null};
+  if(state.diagram){
+    const done={}; for(const k in state.diagram.done) done[k]=new Set(state.diagram.done[k]);
+    snap.diag={R:state.diagram.R, preformed:state.diagram.preformed,
+               activeTier:state.diagram.activeTier, done};
+  }
+  state.undoStack.push(snap);
+  if(state.undoStack.length>8) state.undoStack.shift(); // 只留最近 8 步(次數上限 3,綽綽有餘)
+  updateUndoUI();
+}
+function undoCut(){
+  if(!state||pressing) return;
+  if(!state.undoStack.length||state.undoLeft<=0) return;
+  const snap=state.undoStack.pop();
+  state.solid=snap.solid;
+  if(snap.diag&&state.diagram){
+    state.diagram.R=snap.diag.R; state.diagram.preformed=snap.diag.preformed;
+    state.diagram.activeTier=snap.diag.activeTier; state.diagram.done=snap.diag.done;
+  }
+  state.undoLeft--;
+  rebuildStone(); renderDiagramPanel(); updateCompassTargets(); updateNextCutBar(); updateDepthStopUI();
+  if(state.diagram) clearWarn();
+  if(SFX.enchant) SFX.enchant();
+  updateUndoUI(true);
+}
+function updateUndoUI(justUsed){
+  const b=document.getElementById('undoBtn'); if(!b) return;
+  const c=document.getElementById('undoLeft');
+  const n=state?state.undoLeft:3;
+  if(c) c.textContent='×'+n;
+  b.disabled=!state||!state.undoStack.length||n<=0;
+  b.title=tx('消耗一次時間魔法,讓上一刀「從未被觀測」(每顆石頭 3 次)',
+             'Spend one rewind: the last cut was never observed (3 per stone)');
+  const span=b.querySelector('.undoTxt');
+  if(span){
+    clearTimeout(undoFxTimer);
+    if(justUsed){ span.textContent=tx('那一刀,未被觀測…','that cut was never observed…');
+      undoFxTimer=setTimeout(()=>updateUndoUI(),1600); }
+    else span.textContent=tx('未觀測的一刀','Unobserved Cut');
+  }
+}
+document.getElementById('undoBtn').onclick=undoCut;
 
 // ============================================================
 //   UI 綁定
@@ -2337,6 +2406,7 @@ document.getElementById('arrayCutBtn').onclick=()=>{
   state.depthStopOn=true; state.depthStopV=t.d*100;
   const dT=depthStopD();
   const remaining=t.indices.filter(i=>!dg.done[t.id].has(i));
+  if(remaining.length) snapshotStone(); // 整批算一步,回溯一次撤掉整組
   for(const i of remaining){
     setIndex(i);
     cutAtPlane(expectedNormal(t.angle,i,state.crown), dT, {deferRebuild:true});
@@ -2654,6 +2724,7 @@ function spawnStone(sys){
   state.uid=genId('g_');
   state.origVolume=solidVolume(state.solid);
   state.origCarat = 25 + Math.random()*15;
+  state.undoStack=[]; state.undoLeft=3; // 時間魔法:每顆石頭 3 次回溯
   dop.visible=true;
   state.lap=0; state.crown=false; state.angle=43; state.index=96;
   // 圖紙模式初始化
@@ -2675,6 +2746,7 @@ function spawnStone(sys){
   document.getElementById('phaseTag').textContent=lapName(0);
   document.querySelectorAll('.lapBtn').forEach((x,i)=>x.classList.toggle('active',i===0));
   renderDiagramPanel(); updateDepthStopUI(); updateCompassTargets(); updateNextCutBar();
+  updateUndoUI();
   updateNavCam();
   rebuildStone();
   if(state.diagram && !coachShown){ coachShown=true; coachShow(0); } else if(!state.diagram){ coachHide(); }
@@ -2723,7 +2795,8 @@ const I18N_STATIC=[
   ['.tsSub','異世界魔法石工坊 — real faceting · blind cuts · chuuni appraisal'],
   ['.tsHint','— click anywhere to enter the workshop —'],
   ['#selectScreen .title h1','✦ Isekai Gemcraft ✦'],
-  ['#selectScreen .title p','Pick a crystal system → real faceting mechanics → chuuni appraisal. Cuts reveal blind. No undo.'],
+  ['#selectScreen .title p','Pick a crystal system → real faceting mechanics → chuuni appraisal. Cuts reveal blind. Only 3 rewinds.'],
+  ['#undoGroup > label','Time magic Rewind <b id="undoLeft">×3</b>'],
   ['.diagCard[data-diag="free"] .recBadge','🔥 Hard Mode'],
   ['.diagCard[data-diag="free"] .dcText','Free Cutting<small>no diagram · pure blind cuts · zero guardrails</small>'],
   ['.diagCard[data-diag="oct8"] .recBadge','⭐ Start Here'],
@@ -2820,6 +2893,7 @@ function applyLang(){
   const lc=document.getElementById('leftCollapseBtn');
   lc.textContent=leftToolsEl.classList.contains('collapsed')?tx('📜 展開面板','📜 Show panel'):tx('◀ 收合面板','◀ Hide panel');
   if(!pressing) pressBtn.querySelector('span').textContent=pressLabel();
+  updateUndoUI(); // 回溯鈕文字+title 換語言
   if(state){
     document.getElementById('angleVal').textContent=state.angle;
     updateInfo(); renderDiagramPanel(); updateNextCutBar(); updateDepthStopUI(); updateCompassTargets();
