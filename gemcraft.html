@@ -41,6 +41,7 @@
     padding:8px 14px; font-size:14px; transition:.12s;
   }
   button:hover{background:#2e2450; border-color:var(--accent);}
+  .undoIcon{vertical-align:-3px; margin-right:2px; flex:none;}
   button.primary{background:linear-gradient(180deg,#7b53d6,#5a37a8); border-color:#9b7aff;}
   button.primary:hover{filter:brightness(1.12);}
   button.danger{border-color:#5a2a35; color:#ffb3bf;}
@@ -699,7 +700,7 @@
       </div>
       <div class="ctrlGroup" id="undoGroup">
         <label>時間魔法 Rewind <b id="undoLeft">×3</b></label>
-        <button id="undoBtn" disabled>⏪ <span class="undoTxt">未觀測的一刀</span></button>
+        <button id="undoBtn" disabled><svg class="undoIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> <span class="undoTxt">未觀測的一刀</span></button>
       </div>
     </div>
 
@@ -1572,6 +1573,33 @@ const SFX={
       this.osc('sine', 2400+Math.random()*1800, tc+0.18+i*0.09, 0.25, 0.03);
     }
   },
+  arrayCut(){
+    this.init(); if(!this.ctx) return;
+    const c=this.ctx, t0=c.currentTime+0.02;
+    // 魔法陣展開:濾波噪聲上掃
+    const len=Math.floor(c.sampleRate*0.35);
+    const buf=c.createBuffer(1,len,c.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+    const src=c.createBufferSource(); src.buffer=buf;
+    const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=2.2;
+    bp.frequency.setValueAtTime(400,t0);
+    bp.frequency.exponentialRampToValueAtTime(4200,t0+0.3);
+    const g=c.createGain(); g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(0.09,t0+0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+0.36);
+    src.connect(bp); bp.connect(g); g.connect(this.master);
+    src.start(t0); src.stop(t0+0.4);
+    // 刻面連續閃切:快速五聲音階閃光(比 enchant 密集,模擬同時切完一整圈)
+    [1046.5,1318.5,1568,1975.5,2349.3].forEach((f,i)=>{
+      const nt=t0+0.06+i*0.045;
+      this.osc('sine', f, nt, 0.22, 0.05);
+      this.osc('triangle', f*2, nt, 0.1, 0.012);
+    });
+    // 陣列落定的低音收尾
+    this.osc('sine', 130.81, t0+0.30, 0.4, 0.05);
+    this.osc('triangle', 196, t0+0.30, 0.3, 0.02);
+  },
 };
 document.getElementById('sndBtn').textContent=SFX.muted?'🔇':'🔊';
 document.getElementById('sndBtn').onclick=()=>SFX.toggle();
@@ -2407,6 +2435,7 @@ document.getElementById('arrayCutBtn').onclick=()=>{
   const dT=depthStopD();
   const remaining=t.indices.filter(i=>!dg.done[t.id].has(i));
   if(remaining.length) snapshotStone(); // 整批算一步,回溯一次撤掉整組
+  if(remaining.length) SFX.arrayCut();
   for(const i of remaining){
     setIndex(i);
     cutAtPlane(expectedNormal(t.angle,i,state.crown), dT, {deferRebuild:true});

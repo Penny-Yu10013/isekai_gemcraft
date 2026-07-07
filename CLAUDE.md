@@ -195,7 +195,7 @@
 | 傾斜/自旋/翻面 | `rigQuaternion`、`stoneQuaternion`、`expectedNormal`、`setCrown`、`updateNavCam` |
 | 石頭外觀/材質/lap 階段 | `LAPS`、`rebuildStone`、`buildGeometry` |
 | 盲切手感 | `startPress`/`endPress`、`MAX_DEPTH`、`DEPTH_RATE`、`animate` 裡的深度條 |
-| **時間魔法回溯(未觀測的一刀)** | `snapshotStone`/`undoCut`/`updateUndoUI`、HTML `#undoGroup`(操作台第 5 格);快照鉤子在 `endPress`/`arrayCutBtn`/`preform`/`preformDiagram`;次數在 `spawnStone` 的 `state.undoLeft=3` |
+| **時間魔法回溯(未觀測的一刀)** | `snapshotStone`/`undoCut`/`updateUndoUI`、HTML `#undoGroup`(操作台第 5 格);快照鉤子在 `endPress`/`arrayCutBtn`/`preform`/`preformDiagram`;次數在 `spawnStone` 的 `state.undoLeft=3`。圖示是 `.undoIcon`(inline SVG,眼睛加斜線=「未被觀測」,取代原本 ⏪ emoji——用戶嫌舊圖示不好看,inline SVG 用 `stroke="currentColor"` 自動跟 `var(--text)` 走,亮暗主題都不用另外配色) |
 | **in-app WebView 視口修正** | CSS `@supports (height:100svh)` 區塊(html/body 高+body relative+左下三鈕改 absolute)、`#console` 的 `52svh` 檔 |
 | **下壓鈕窄視窗被裁切(flex 擠壓 bug)** | `#pressBtn` 的 `flex-shrink:0`(根因:`overflow:hidden` 讓 flex item 失去自動最小高度保護,被 `#console` 的 `overflow-y:auto` 擠壓吃掉) |
 | index / 折數 / 錶盤 | `setIndex`、`.presetRow` 的 onclick、`setActiveFold` |
@@ -217,7 +217,7 @@
 | **鏟寶石結算** | `scoopSVG`、`stonePileHTML`(id hash 定位)、`renderResultScoop`、CSS `pourIn` |
 | **蒐集頁 / 石頭詳情** | `openGallery`/`renderGallery`/`openStoneDetail`、`#galleryScreen`/`#stoneDetail` |
 | **標題演出** | `.tsChar` 逐字動畫、`armBase`/`armCur`(工作姿勢↔抬臂) |
-| **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀;mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
+| **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant/**arrayCut**)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀,**陣列快切=噪聲上掃(魔法陣展開)+五聲密集閃光(模擬同時切完一圈)+低音收尾**(2026-07,補上原本沒音效的缺);mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
 | **附魔轉色** | `TINTS` 陣列、`#tintBtn`/`#tintRow`(leftTools 內原地展開,in-flow 非浮動),reset dot=回原石色 |
 | **淺色石稜線描邊** | `rebuildStone` 的 `lum>0.85` 分支(EdgesGeometry+polygonOffset) |
 | **自由切割警示角標** | `.hardBadge`(套 `.recBadge` 定位,紅橙漸層),選石畫面自由切割卡上的「🔥匠人精神」,對比圖紙卡的「⭐推薦入門」 |
