@@ -64,7 +64,7 @@ The engineering handover doc is [`CLAUDE.md`](CLAUDE.md) (architecture decisions
 
 - Cut-shape icons from [JewelCraft](https://github.com/mrachinskiy/jewelcraft) (Mikhail Rachinskiy, GPL-3.0)
 - Faceting diagram references: [GemologyProject Faceting Designs](https://www.gemologyproject.com/wiki/index.php?title=Faceting_Designs); the five built-in diagrams are original simplified designs
-- Built in collaboration with [Claude Code](https://claude.com/claude-code)
+- Built in collaboration with [Claude Code](https://claude.com/claude-code) — see **[CREDITS.md](CREDITS.md)** for the honest multi-model development timeline (including the attempt that didn't work out)
 
 ## License
 
