@@ -31,8 +31,8 @@ sound design touch-ups, and this file.
 - **Sonnet 5** — UI refinement, bugfixes, polish passes, marketing copy review
 - **Opus 4.8** — first attempt; not shipped, but the reason the second attempt started
   from a clearer idea of what to avoid
-- **Human** — every creative and design decision, all copy, gemology accuracy checks,
-  QA on an actual phone
+- **Human** — every creative and design decision, final say on all copy (AI drafted,
+  human approved or replaced), gemology accuracy checks, QA on an actual phone
 
 ## Also
 
