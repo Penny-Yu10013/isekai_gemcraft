@@ -155,6 +155,11 @@
   .tintDot:hover{border-color:#fff; transform:scale(1.12);}
   .tintDot.reset{background:#241b3e; display:flex; align-items:center; justify-content:center;
     font-size:13px; color:var(--gold); line-height:1;}
+  #expRow{width:100%; display:flex; align-items:center; gap:8px; padding:8px 10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;}
+  #expRow input{flex:1; min-width:0;}
+  #expRow b{font-size:12px; color:var(--text); min-width:38px; text-align:right;}
+  #expRow button{padding:3px 8px; font-size:12px;}
   #sndBtn{position:fixed; left:14px; bottom:18px; z-index:55; font-size:16px;
     width:44px; height:44px; border-radius:50%; padding:0;}
 
@@ -397,6 +402,7 @@
   html[data-theme="light"] button{ background:rgba(255,255,255,.6); backdrop-filter:blur(14px) saturate(160%); }
   html[data-theme="light"] button:hover{ background:rgba(255,255,255,.95); }
   html[data-theme="light"] #tintRow,
+  html[data-theme="light"] #expRow,
   html[data-theme="light"] #coachBubble{ backdrop-filter:blur(16px) saturate(160%); }
   html[data-theme="light"] button.primary,
   html[data-theme="light"] #expandBtn,
@@ -651,6 +657,12 @@
     <button id="lapToggle">▦ 研磨台：實體</button>
     <button id="tintBtn">🎨 附魔轉色</button>
     <div id="tintRow" style="display:none;"></div>
+    <button id="expBtn">💡 環境亮度</button>
+    <div id="expRow" style="display:none;">
+      <input type="range" id="expSlider" min="0.4" max="1.5" step="0.05" value="1">
+      <b id="expVal">100%</b>
+      <button id="expReset" title="回預設 100%">↺</button>
+    </div>
     <div id="diagramPanel" class="panel" style="display:none;">
       <div class="dgHead"><span id="dgName">📜 —</span></div>
       <div id="dgHint" class="hint" style="text-align:left; padding:0 12px;">—</div>
@@ -1108,6 +1120,29 @@ function buildGeometry(solid){
   g.addGroup(posA.length/3, posB.length/3, 1);
   return g;
 }
+// 雙色漸層附魔:沿石頭局部方向把 c1→c2 烘進頂點色(材質底色改白,靠頂點色上色)
+// t 中段收窄(×1.6)讓雙色帶像紫黃晶那樣有清楚分界而不是整顆糊掉
+function applyGradAttr(g, c1hex, c2hex, dirIdx){
+  const pos=g.getAttribute('position');
+  const dir=GRAD_DIRS[dirIdx||0];
+  let mn=1e9, mx=-1e9;
+  for(let i=0;i<pos.count;i++){
+    const t=pos.getX(i)*dir[0]+pos.getY(i)*dir[1]+pos.getZ(i)*dir[2];
+    if(t<mn)mn=t; if(t>mx)mx=t;
+  }
+  const span=Math.max(1e-6,mx-mn);
+  const c1=new THREE.Color(c1hex), c2=new THREE.Color(c2hex), cc=new THREE.Color();
+  const arr=new Float32Array(pos.count*3);
+  for(let i=0;i<pos.count;i++){
+    let t=(pos.getX(i)*dir[0]+pos.getY(i)*dir[1]+pos.getZ(i)*dir[2]-mn)/span;
+    t=Math.min(1,Math.max(0,(t-0.5)*1.6+0.5));
+    cc.copy(c1).lerp(c2,t);
+    arr[i*3]=cc.r; arr[i*3+1]=cc.g; arr[i*3+2]=cc.b;
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(arr,3));
+}
+// 目前石頭的附魔色描述(單色=數字,雙色=物件),縮圖/hero 共用
+function tintOf(st){ return st.color2!=null? {c1:st.color, c2:st.color2, dir:st.gradDir||0} : st.color; }
 
 // ============================================================
 //   Three.js 場景
@@ -1221,10 +1256,13 @@ function captureStoneThumb(solid, colorHex, lapIdx, px){
     shotR.setSize(px,px,false);
     shotCam.aspect=1; shotCam.updateProjectionMatrix();
     const g=buildGeometry(solid);
-    const base=new THREE.Color(colorHex);
+    // colorHex 可以是單色數字或 tintOf() 的漸層物件
+    const grad=colorHex&&typeof colorHex==='object';
+    if(grad) applyGradAttr(g, colorHex.c1, colorHex.c2, colorHex.dir);
+    const base=grad? new THREE.Color(0xffffff) : new THREE.Color(colorHex);
     const mA=new THREE.MeshStandardMaterial({color:base.clone().multiplyScalar(0.45),
-      roughness:0.95, metalness:0, flatShading:true});
-    const mB=LAPS[lapIdx].mat(); mB.color=base.clone();
+      vertexColors:grad, roughness:0.95, metalness:0, flatShading:true});
+    const mB=LAPS[lapIdx].mat(); mB.color=base.clone(); mB.vertexColors=grad;
     const mesh=new THREE.Mesh(g,[mA,mB]);
     mesh.rotation.y=Math.random()*Math.PI*2;   // 堆疊多樣性
     shotScene.add(mesh);
@@ -1242,8 +1280,10 @@ function startHero(solid, colorHex){
   shotR.setSize(260,260,false);
   shotCam.aspect=1; shotCam.updateProjectionMatrix();
   const g=buildGeometry(solid);
-  const m=new THREE.MeshPhysicalMaterial({color:new THREE.Color(colorHex),
-    metalness:0, roughness:0.12, clearcoat:1, clearcoatRoughness:0.08,
+  const grad=colorHex&&typeof colorHex==='object';
+  if(grad) applyGradAttr(g, colorHex.c1, colorHex.c2, colorHex.dir);
+  const m=new THREE.MeshPhysicalMaterial({color:grad?new THREE.Color(0xffffff):new THREE.Color(colorHex),
+    vertexColors:grad, metalness:0, roughness:0.12, clearcoat:1, clearcoatRoughness:0.08,
     envMapIntensity:1.0, flatShading:true});
   heroMesh=new THREE.Mesh(g,[m,m]);
   shotScene.add(heroMesh);
@@ -1617,28 +1657,90 @@ document.getElementById('themeBtn').onclick=()=>{
 
 // ---- 附魔轉色:純視覺換色(轉色也會存進蒐集縮圖) ----
 const TINTS=[
-  ['還原原色',null],['紅',0xc22740],['橙',0xd98a2b],['金',0xffd479],
-  ['祖母綠',0x1f8a4d],['橄欖綠',0x8fce3f],['青',0x2f9f96],['藍',0x2f6fc0],
-  ['紫',0x7a3fb0],['粉',0xe37fb0],['白鑽',0xdce8f2],['墨',0x2c2c38],
+  ['還原原色','Reset',null],['紅','Red',0xc22740],['橙','Orange',0xd98a2b],['金','Gold',0xffd479],
+  ['祖母綠','Emerald',0x1f8a4d],['橄欖綠','Olive',0x8fce3f],['青','Teal',0x2f9f96],['藍','Blue',0x2f6fc0],
+  ['紫','Purple',0x7a3fb0],['粉','Pink',0xe37fb0],['白鑽','Diamond White',0xdce8f2],['墨','Ink',0x2c2c38],
+  // 雙色漸層(value=[c1,c2]):紫黃晶=landing page 同款配色
+  ['紫黃晶','Ametrine',[0x9b59b6,0xd4a017]],
+  ['雙色碧璽 粉綠','Watermelon Tourmaline',[0xe37fb0,0x1f8a4d]],
+  ['雙色碧璽 藍綠','Blue-Green Tourmaline',[0x2f6fc0,0x1f8a4d]],
+  ['藍紫晶','Blue-Violet',[0x2f6fc0,0x7a3fb0]],
+  ['日落','Sunset',[0xc22740,0xffd479]],
+  ['煙墨','Smoky Ink',[0xdce8f2,0x2c2c38]],
 ];
+// 漸層方向(石頭局部座標,烘進頂點色 → 翻面/自旋時顏色跟著石頭走)
+const GRAD_DIRS=[[0,1,0],[0.7071,0.7071,0],[1,0,0],[0.7071,-0.7071,0]];
+const GRAD_GLYPH=['↕','⤢','↔','⤡'];
+function hex6(c){ return '#'+c.toString(16).padStart(6,'0'); }
+function updateGradCtrl(){
+  const c=document.getElementById('gradCtrl'); if(!c) return;
+  const on=state&&state.color2!=null;
+  c.style.display=on?'flex':'none';
+  const d=document.getElementById('gradDirBtn');
+  if(d) d.textContent=GRAD_GLYPH[(state&&state.gradDir)||0];
+}
 (function buildTints(){
   const row=document.getElementById('tintRow'); if(!row) return;
-  row.innerHTML=TINTS.map((t,i)=>
-    `<div class="tintDot${t[1]===null?' reset':''}" title="${t[0]}" data-i="${i}"
-      style="${t[1]!==null?('background:#'+t[1].toString(16).padStart(6,'0')):''}">${t[1]===null?'↺':''}</div>`).join('');
+  row.innerHTML=TINTS.map((t,i)=>{
+    const v=t[2];
+    const bg=v===null?'':Array.isArray(v)
+      ?`background:linear-gradient(135deg,${hex6(v[0])} 0 42%,${hex6(v[1])} 58% 100%)`
+      :`background:${hex6(v)}`;
+    return `<div class="tintDot${v===null?' reset':''}" title="${tx(t[0],t[1])}" data-i="${i}" style="${bg}">${v===null?'↺':''}</div>`;
+  }).join('')
+  // 漸層控制列:方向(↕⤢↔⤡ 循環)+顏色對調,只在漸層附魔時顯示
+  +`<div id="gradCtrl" style="display:none; grid-column:1/-1; gap:6px; align-items:center;">
+      <button id="gradDirBtn" style="flex:1; font-size:14px; padding:4px;" title="${tx('漸層方向','Gradient direction')}">↕</button>
+      <button id="gradFlipBtn" style="flex:1; font-size:14px; padding:4px;" title="${tx('顏色對調','Swap colors')}">⇅</button>
+    </div>`;
   row.querySelectorAll('.tintDot').forEach(d=>{
     d.onclick=()=>{
       if(!state) return;
-      const t=TINTS[+d.dataset.i];
-      state.color = (t[1]===null)? state.system.color : t[1];
-      rebuildStone();
+      const v=TINTS[+d.dataset.i][2];
+      if(v===null){ state.color=state.system.color; state.color2=null; }
+      else if(Array.isArray(v)){ state.color=v[0]; state.color2=v[1]; }
+      else{ state.color=v; state.color2=null; }
+      updateGradCtrl(); rebuildStone();
     };
   });
+  document.getElementById('gradDirBtn').onclick=()=>{
+    if(!state||state.color2==null) return;
+    state.gradDir=((state.gradDir||0)+1)%4;
+    updateGradCtrl(); rebuildStone();
+  };
+  document.getElementById('gradFlipBtn').onclick=()=>{
+    if(!state||state.color2==null) return;
+    const t=state.color; state.color=state.color2; state.color2=t;
+    rebuildStone();
+  };
   document.getElementById('tintBtn').onclick=()=>{
     const r=document.getElementById('tintRow');
     r.style.display = r.style.display==='none'?'grid':'none';
+    if(r.style.display==='grid') updateGradCtrl();
   };
 })();
+
+// ---- 環境亮度(主場景+導覽器曝光,救淺色附魔在教堂光下的過曝) ----
+// 結算 hero/縮圖走 shotR 自己的 ACES(0.85),不受這裡影響——結算觀感本來就是分開調的。
+// LinearToneMapping 在 exposure=1.0 時與預設(NoToneMapping)像素級同觀感,只是讓 exposure 生效;
+// 必須在第一次 render 前設好,不然要全場景 material.needsUpdate。
+renderer.toneMapping=THREE.LinearToneMapping;
+topR.toneMapping=THREE.LinearToneMapping;
+function applyExposure(v){
+  v=Math.min(1.5,Math.max(0.4,v||1));
+  renderer.toneMappingExposure=v; topR.toneMappingExposure=v;
+  const s=document.getElementById('expSlider'), t=document.getElementById('expVal');
+  if(s) s.value=v;
+  if(t) t.textContent=Math.round(v*100)+'%';
+  try{ localStorage.setItem('gemcraft.exposure', v); }catch(e){}
+}
+document.getElementById('expBtn').onclick=()=>{
+  const r=document.getElementById('expRow');
+  r.style.display = r.style.display==='none'?'flex':'none';
+};
+document.getElementById('expSlider').oninput=e=>applyExposure(parseFloat(e.target.value));
+document.getElementById('expReset').onclick=()=>applyExposure(1);
+applyExposure(parseFloat((()=>{try{return localStorage.getItem('gemcraft.exposure');}catch(e){return null;}})())||1);
 
 // ============================================================
 //   Vault:localStorage 儲存(每顆石頭縮圖+參數,一爐=一盤)
@@ -1723,6 +1825,7 @@ function stoneRecordFromState(extra){
     diagramId:(dg&&dg.preformed)?dg.def.id:null,
     completion:null, accuracy:null,
     name:null, sys:state.system.id, color:state.color,
+    color2:state.color2!=null?state.color2:null, gradDir:state.gradDir||0,
     grade:'?', gradeScore:0, price:0,
     scrapped:false, fav:false, thumb:null,
   }, extra);
@@ -1753,20 +1856,25 @@ function rebuildStone(){
   if(stoneMesh){ scene.remove(stoneMesh); stoneMesh.geometry.dispose();
     stoneMesh.children.forEach(c=>{ if(c.geometry)c.geometry.dispose(); if(c.material)c.material.dispose(); }); }
   const g=buildGeometry(state.solid);
-  const base=new THREE.Color(state.color);
+  const grad=state.color2!=null;
+  if(grad) applyGradAttr(g, state.color, state.color2, state.gradDir);
+  // 漸層時材質底色=白(顏色全靠頂點色);lum/稜線/拋光自發光用兩色平均值判斷
+  const base=grad? new THREE.Color(0xffffff) : new THREE.Color(state.color);
+  const tone=grad? new THREE.Color(state.color).lerp(new THREE.Color(state.color2),0.5)
+                 : new THREE.Color(state.color);
   const matCrystal=new THREE.MeshStandardMaterial({
-    color:base.clone().multiplyScalar(0.45), roughness:0.95, metalness:0, flatShading:true});
-  const lap=LAPS[state.lap].mat(); lap.color=base.clone();
-  if(state.lap===2){ lap.color=base.clone().multiplyScalar(1.15); lap.emissive=base.clone().multiplyScalar(0.08); }
+    color:base.clone().multiplyScalar(0.45), vertexColors:grad, roughness:0.95, metalness:0, flatShading:true});
+  const lap=LAPS[state.lap].mat(); lap.color=base.clone(); lap.vertexColors=grad;
+  if(state.lap===2){ lap.color=base.clone().multiplyScalar(1.15); lap.emissive=tone.clone().multiplyScalar(0.08); }
   stoneMesh=new THREE.Mesh(g,[matCrystal,lap]);
   // 淺色石(白鑽等)在打光下整坨過亮,刻面邊界讀不出來 → 面色微降亮 + 疊深色稜線;深色石不加,維持原觀感
-  const lum=0.299*base.r+0.587*base.g+0.114*base.b;
+  const lum=0.299*tone.r+0.587*tone.g+0.114*tone.b;
   if(lum>0.85){
     lap.color.multiplyScalar(0.9);
     [matCrystal,lap].forEach(m=>{ m.polygonOffset=true; m.polygonOffsetFactor=1; m.polygonOffsetUnits=1; });
     stoneMesh.add(new THREE.LineSegments(
       new THREE.EdgesGeometry(g, 2),
-      new THREE.LineBasicMaterial({color:base.clone().multiplyScalar(0.38), transparent:true, opacity:0.85})));
+      new THREE.LineBasicMaterial({color:tone.clone().multiplyScalar(0.38), transparent:true, opacity:0.85})));
   }
   scene.add(stoneMesh);
   updateInfo();
@@ -2266,7 +2374,7 @@ document.getElementById('scrapBtn').onclick=()=>{
   // 廢石也拍縮圖入盤
   Vault.upsert(session.vid, session.date, stoneRecordFromState({
     scrapped:true, grade:'廢',
-    thumb:captureStoneThumb(state.solid, state.color, state.lap),
+    thumb:captureStoneThumb(state.solid, tintOf(state), state.lap),
   }));
   const tray=document.getElementById('scrapTray');
   const div=document.createElement('div');
@@ -2550,7 +2658,7 @@ function showResult(){
   Vault.upsert(session.vid, session.date, stoneRecordFromState({
     grade:G[1].slice(-1), gradeScore:+gradeScore.toFixed(1), price:price,
     completion:completionV, accuracy:accuracyV, name:gname,
-    thumb:captureStoneThumb(state.solid, state.color, state.lap),
+    thumb:captureStoneThumb(state.solid, tintOf(state), state.lap),
   }));
 
   document.getElementById('rName').textContent=gname;
@@ -2564,7 +2672,7 @@ function showResult(){
   document.getElementById('rVerdict').innerHTML=verdicts.join('<br>');
   document.getElementById('resultScreen').style.display='flex';
   renderResultScoop();
-  startHero(state.solid, state.color);
+  startHero(state.solid, tintOf(state));
   SFX.enchant();   // 施法附魔 → 收銀叮咚
 }
 function randPick(a){ return a[Math.floor(Math.random()*a.length)]; }
@@ -2642,7 +2750,7 @@ function closeGallery(){
   if(galleryReturn==='select') document.getElementById('selectScreen').style.display='flex';
   else if(galleryReturn==='result'){
     document.getElementById('resultScreen').style.display='flex';
-    if(state) startHero(state.solid, state.color);  // 回結算重啟 hero 旋轉
+    if(state) startHero(state.solid, tintOf(state));  // 回結算重啟 hero 旋轉
   }
 }
 function renderGallery(){
@@ -2754,6 +2862,7 @@ function spawnStone(sys){
   state.origVolume=solidVolume(state.solid);
   state.origCarat = 25 + Math.random()*15;
   state.undoStack=[]; state.undoLeft=3; // 時間魔法:每顆石頭 3 次回溯
+  state.color2=null; state.gradDir=0; updateGradCtrl(); // 新石頭回單色,藏漸層控制列
   dop.visible=true;
   state.lap=0; state.crown=false; state.angle=43; state.index=96;
   // 圖紙模式初始化
@@ -2841,6 +2950,7 @@ const I18N_STATIC=[
   ['#topviewWrap div.label[style]','Symmetry · <span id="symLabel">—</span>'],
   ['#helpBtn','❔ Tutorial / How to play'],
   ['#tintBtn','🎨 Enchant Tint'],
+  ['#expBtn','💡 Exposure'],
   ['#collapseBtn','▼ Hide console'],
   ['#console .ctrlRow .ctrlGroup:nth-child(1) > label','Angle Protractor <b><span id="angleVal">43</span>°</b>'],
   ['#console .ctrlRow .ctrlGroup:nth-child(2) > label','Index <b><span id="indexDeg">0</span>° azimuth (96-tooth)</b>'],
@@ -2917,6 +3027,10 @@ function applyLang(){
   renderTitle();
   document.getElementById('systemGrid').innerHTML=''; buildSystemCards(); // 晶系卡換語言重生
   // 動態文字依現況重刷(邏輯不動,只重寫 label)
+  document.querySelectorAll('#tintRow .tintDot').forEach(d=>{ const t=TINTS[+d.dataset.i]; if(t) d.title=tx(t[0],t[1]); }); // 調色盤 tooltip 換語言
+  { const gd=document.getElementById('gradDirBtn'), gf=document.getElementById('gradFlipBtn');
+    if(gd) gd.title=tx('漸層方向','Gradient direction');
+    if(gf) gf.title=tx('顏色對調','Swap colors'); }
   document.getElementById('compassToggle').textContent=tx('🧭 方位尺：','🧭 Compass: ')+(compassOn?tx('開','ON'):tx('關','OFF'));
   setLapMode(lapMode); // 同值重套=只刷新研磨台鈕文字
   const lc=document.getElementById('leftCollapseBtn');
