@@ -170,34 +170,39 @@
     background:linear-gradient(90deg,transparent,#fff 35%,#cbb0ff 65%,transparent);
     transform:rotate(-22deg) scaleX(0); transform-origin:left center;
     filter:drop-shadow(0 0 6px #b48cff) drop-shadow(0 0 14px #8a5bff);}
-  #fxCut.fx .slash{animation:fxSlash .5s ease-out .02s;}
+  #fxCut.fx .slash{animation:fxSlash 1.3s ease-out .02s;}
   @keyframes fxSlash{
     0%{opacity:0; transform:rotate(-22deg) scaleX(0);}
-    12%{opacity:1;}
-    45%{transform:rotate(-22deg) scaleX(1); opacity:1;}
+    10%{opacity:1;}
+    28%{transform:rotate(-22deg) scaleX(1); opacity:1;}
+    55%{opacity:.32;}
     100%{transform:rotate(-22deg) scaleX(1); opacity:0;}}
-  #fxCut .cracks{position:absolute; inset:0; width:100%; height:100%; opacity:0;
-    stroke:#e2d6ff; stroke-width:1.1; fill:none;
-    filter:drop-shadow(0 0 4px #b48cffcc);}
-  #fxCut .cracks polyline{stroke-dasharray:1; stroke-dashoffset:1;}
-  #fxCut.fx .cracks{animation:fxCrackHold 2s ease .2s forwards;}
-  #fxCut.fx .cracks polyline{animation:fxCrackDraw .5s ease-out .24s forwards;}
-  @keyframes fxCrackDraw{to{stroke-dashoffset:0;}}
-  @keyframes fxCrackHold{0%{opacity:0;} 10%{opacity:.95;} 75%{opacity:.95;} 100%{opacity:0;}}
-  #fxCut .sp{position:absolute; width:5px; height:5px; border-radius:50%; opacity:0;
+  /* 第二道反向斬,交叉出 X 光痕(水果忍者的優美感,不要蜘蛛網) */
+  #fxCut .slash2{position:absolute; right:-12%; top:38%; width:124%; height:2px; opacity:0;
+    background:linear-gradient(90deg,transparent,#cbb0ff 35%,#fff 65%,transparent);
+    transform:rotate(16deg) scaleX(0); transform-origin:right center;
+    filter:drop-shadow(0 0 6px #b48cff) drop-shadow(0 0 14px #8a5bff);}
+  #fxCut.fx .slash2{animation:fxSlash2 1.25s ease-out .18s;}
+  @keyframes fxSlash2{
+    0%{opacity:0; transform:rotate(16deg) scaleX(0);}
+    10%{opacity:1;}
+    28%{transform:rotate(16deg) scaleX(1); opacity:1;}
+    55%{opacity:.28;}
+    100%{transform:rotate(16deg) scaleX(1); opacity:0;}}
+  /* 光瓣:柔焦慢飄,不是爆炸碎屑 */
+  #fxCut .sp{position:absolute; width:6px; height:6px; border-radius:50%; opacity:0;
     background:radial-gradient(circle,#fff 0%,#cbb0ff 55%,transparent 75%);
-    box-shadow:0 0 8px #b48cff, 0 0 16px #8a5bff;}
-  #fxCut.fx .sp{animation:fxSpark .75s ease-out .3s forwards;}
+    box-shadow:0 0 9px #b48cff, 0 0 18px #8a5bff; filter:blur(.5px);}
+  #fxCut.fx .sp{animation:fxSpark .95s ease-out .26s forwards;}
   @keyframes fxSpark{
     0%{opacity:0; transform:translate(0,0) scale(.4);}
-    18%{opacity:1;}
-    100%{opacity:0; transform:translate(var(--dx,20px),var(--dy,-20px)) scale(1.1);}}
-  #fxCut.fx{animation:fxShake .32s ease .16s;}
+    16%{opacity:1;}
+    100%{opacity:0; transform:translate(var(--dx,20px),var(--dy,-20px)) scale(1.05);}}
+  #fxCut.fx{animation:fxShake .3s ease .14s;}
   @keyframes fxShake{
     0%,100%{transform:translate(0,0);}
-    25%{transform:translate(-3px,2px) rotate(-.4deg);}
-    50%{transform:translate(3px,-2px) rotate(.4deg);}
-    75%{transform:translate(-2px,-1px);}}
+    30%{transform:translate(-2px,1px) rotate(-.25deg);}
+    60%{transform:translate(2px,-1px) rotate(.25deg);}}
 
   /* ---- 卡2:異世界演算符文,橫向漂流(常駐微光,hover 增亮) ---- */
   #fxRunes .rl{position:absolute; left:0; white-space:nowrap; display:inline-block;
@@ -213,7 +218,7 @@
   /* ---- 卡3:B+ → A+ → S+ 評級連段 ---- */
   #fxRank .rk{position:absolute; opacity:0; font-weight:900; font-style:italic;
     letter-spacing:.02em; line-height:1;}
-  #fxRank .rb{left:10%; top:10%;  font-size:30px; color:#eae2ff; text-shadow:0 0 10px #b48cffaa;}
+  #fxRank .rb{right:14%; top:7%;  font-size:30px; color:#eae2ff; text-shadow:0 0 10px #b48cffaa;} /* 右上,別撞左上的⚖icon */
   #fxRank .ra{left:38%; top:30%;  font-size:42px; color:#c9a8ff; text-shadow:0 0 14px #a06cffcc;}
   #fxRank .rs{right:7%; bottom:6%; font-size:66px; color:#fff;
     text-shadow:0 0 8px #fff, 0 0 24px #b48cff, 0 0 44px #8a5bff;}
@@ -242,12 +247,55 @@
     0%{opacity:.9; transform:scale(.2);}
     100%{opacity:0; transform:scale(6);}}
 
+  /* ============================================================
+     影片框紫焰(用戶埋很久的特效):火舌沿框緣竄動,常駐
+     色系照「特效統一紫白」:火體紫羅蘭→焰心白粉,p 變體偏粉紫致敬參考圖
+     ============================================================ */
+  .vWrap{position:relative;}
+  .vWrap .videoBox{position:relative; z-index:1;}
+  .flames{position:absolute; inset:-14px; z-index:0; pointer-events:none; filter:blur(7px);}
+  .flames i{position:absolute; width:var(--fw,50px); height:var(--fh,110px); opacity:.9;
+    background:linear-gradient(to top, #6d3fd6d8 0%, #a06cffc4 42%, #efe0ff90 76%, transparent 100%);
+    border-radius:50% 50% 34% 34% / 64% 64% 36% 36%;
+    transform-origin:bottom center;
+    animation:fxFlick var(--fd,1.2s) ease-in-out var(--fdl,0s) infinite alternate;}
+  .flames i.p{background:linear-gradient(to top, #8a3fd6d8 0%, #c77dffc9 42%, #ffd6f79a 76%, transparent 100%);}
+  .flames i.t{--fr:0deg;  bottom:calc(100% - 52px); margin-left:calc(var(--fw,50px)/-2);}
+  .flames i.l{--fr:-38deg; left:-10px;  margin-top:calc(var(--fh,110px)/-2);}
+  .flames i.r{--fr:38deg;  right:-10px; margin-top:calc(var(--fh,110px)/-2);}
+  @keyframes fxFlick{
+    from{transform:rotate(var(--fr,0deg)) scaleY(.82) scaleX(1.06) skewX(-2.5deg); opacity:.72;}
+    to  {transform:rotate(var(--fr,0deg)) scaleY(1.12) scaleX(.94) skewX(2.5deg); opacity:1;}}
+  /* 連續火焰基底帶:把獨立火舌接成一面火牆(火舌=牆上竄出的舌尖) */
+  .flames s{position:absolute; display:block; animation:fxGlowPulse 2.2s ease-in-out infinite alternate;}
+  .fb.ft{left:-4px; right:-4px; bottom:calc(100% - 42px); height:88px;
+    background:linear-gradient(to top,#8a5bffd6 0%,#a06cff96 45%,transparent 100%);
+    border-radius:42% 58% 55% 45% / 88% 84% 12% 16%;}
+  .fb.fl{top:3%; bottom:3%; left:-20px; width:64px;
+    background:linear-gradient(to left,transparent 0%,#a06cff8c 55%,#8a5bffcc 100%);
+    border-radius:60% 40% 45% 55% / 30% 30% 70% 70%;}
+  .fb.fr{top:3%; bottom:3%; right:-20px; width:64px;
+    background:linear-gradient(to right,transparent 0%,#a06cff8c 55%,#8a5bffcc 100%);
+    border-radius:40% 60% 55% 45% / 30% 30% 70% 70%;}
+  .fb.fbm{left:6%; right:6%; top:calc(100% - 26px); height:44px; opacity:.55;
+    background:linear-gradient(to bottom,#8a5bffb0 0%,#a06cff66 50%,transparent 100%);
+    border-radius:45% 55% 50% 50% / 15% 12% 85% 88%;}
+  .fglow{position:absolute; inset:-6px; border-radius:20px;
+    background:
+      radial-gradient(62% 46% at 50% 0%,  #a06cff59, transparent 72%),
+      radial-gradient(34% 44% at 4% 42%,  #8a5bff4d, transparent 72%),
+      radial-gradient(34% 44% at 96% 42%, #8a5bff4d, transparent 72%);
+    animation:fxGlowPulse 2.8s ease-in-out infinite alternate;}
+  @keyframes fxGlowPulse{from{opacity:.55;}to{opacity:1;}}
+  @media (max-width:820px){ .flames{filter:blur(5px);} .flames i{opacity:.65;} }
+
   /* 觸控裝置:關滑鼠追蹤(JS 也擋),寶石維持靜態白色 */
   @media (hover:none){ #gemField .fl{animation:none;} }
   @media (prefers-reduced-motion:reduce){
     .reveal,.reveal .feat{opacity:1 !important; transform:none !important; transition:none !important;}
     .hero h1,#gemField .fl,.playBtn::after{animation:none !important;}
     .fxCard,.fxCard .fxLayer *{animation:none !important;}
+    .flames i,.fglow{animation:none !important;}
   }
 </style>
 </head>
@@ -350,11 +398,35 @@
     <div class="meta">Free · no install · desktop &amp; mobile · English / 繁體中文 (toggle in-game)</div>
   </div>
 
-  <section class="reveal">
+  <section class="reveal videoSec">
     <!-- ▼▼ 影片好了之後:把下面 YT_ID 填上 YouTube 影片 ID(網址 v= 後面那串),存檔即可 ▼▼ -->
-    <div class="videoBox" id="videoBox">
-      <img src="assets/shot_title.jpg" alt="Isekai Gemcraft — magical faceting machine">
-      <div class="soon"><span>✦ TRAILER COMING SOON ✦</span></div>
+    <div class="vWrap">
+      <!-- 影片框後面的紫焰(用戶埋很久的特效):火舌沿框緣竄動,紫羅蘭火體+白粉焰心 -->
+      <div class="flames" aria-hidden="true">
+        <i class="t"   style="left:5%;  --fw:46px; --fh:110px; --fd:1.3s;  --fdl:-.2s;"></i>
+        <i class="t p" style="left:15%; --fw:60px; --fh:150px; --fd:1.05s; --fdl:-.6s;"></i>
+        <i class="t"   style="left:27%; --fw:44px; --fh:95px;  --fd:1.4s;  --fdl:-.9s;"></i>
+        <i class="t p" style="left:40%; --fw:66px; --fh:165px; --fd:.95s;  --fdl:-.35s;"></i>
+        <i class="t"   style="left:54%; --fw:50px; --fh:120px; --fd:1.25s; --fdl:-.75s;"></i>
+        <i class="t p" style="left:66%; --fw:62px; --fh:150px; --fd:1.1s;  --fdl:-.15s;"></i>
+        <i class="t"   style="left:79%; --fw:46px; --fh:100px; --fd:1.35s; --fdl:-.5s;"></i>
+        <i class="t p" style="left:89%; --fw:52px; --fh:130px; --fd:1s;    --fdl:-.85s;"></i>
+        <i class="l"   style="top:16%;  --fw:44px; --fh:110px; --fd:1.2s;  --fdl:-.4s;"></i>
+        <i class="l p" style="top:46%;  --fw:50px; --fh:130px; --fd:1.05s; --fdl:-.8s;"></i>
+        <i class="l"   style="top:72%;  --fw:40px; --fh:95px;  --fd:1.45s; --fdl:-.1s;"></i>
+        <i class="r p" style="top:20%;  --fw:50px; --fh:125px; --fd:1.1s;  --fdl:-.55s;"></i>
+        <i class="r"   style="top:50%;  --fw:44px; --fh:105px; --fd:1.3s;  --fdl:-.25s;"></i>
+        <i class="r p" style="top:76%;  --fw:48px; --fh:115px; --fd:1s;    --fdl:-.7s;"></i>
+        <s class="fb ft"></s>
+        <s class="fb fl"></s>
+        <s class="fb fr"></s>
+        <s class="fb fbm"></s>
+        <b class="fglow"></b>
+      </div>
+      <div class="videoBox" id="videoBox">
+        <img src="assets/shot_title.jpg" alt="Isekai Gemcraft — magical faceting machine">
+        <div class="soon"><span>✦ TRAILER COMING SOON ✦</span></div>
+      </div>
     </div>
     <script>
       const YT_ID = "";   // ← paste YouTube video id here, e.g. "dQw4w9WgXcQ"
@@ -371,23 +443,13 @@
       <div class="feat panel fxCard" id="fxCut">
         <div class="fxLayer">
           <i class="slash"></i>
-          <svg class="cracks" viewBox="0 0 300 190" preserveAspectRatio="none">
-            <polyline pathLength="1" points="150,92 128,74 108,66 78,42 58,34"/>
-            <polyline pathLength="1" points="150,92 176,72 204,64 236,38"/>
-            <polyline pathLength="1" points="150,92 122,102 88,118 52,148"/>
-            <polyline pathLength="1" points="150,92 180,108 214,120 252,150"/>
-            <polyline pathLength="1" points="150,92 148,60 158,30 152,8"/>
-            <polyline pathLength="1" points="150,92 144,126 152,158 146,184"/>
-            <polyline pathLength="1" points="128,74 118,84 100,90"/>
-            <polyline pathLength="1" points="176,72 190,84 210,88"/>
-            <polyline pathLength="1" points="122,102 116,120 96,138"/>
-            <polyline pathLength="1" points="180,108 176,128 190,148"/>
-          </svg>
-          <i class="sp" style="--dx:-34px;--dy:-22px; left:34%; top:36%;"></i>
-          <i class="sp" style="--dx:38px;--dy:-18px;  left:64%; top:34%;"></i>
-          <i class="sp" style="--dx:-30px;--dy:26px;  left:32%; top:58%;"></i>
-          <i class="sp" style="--dx:36px;--dy:24px;   left:66%; top:60%;"></i>
-          <i class="sp" style="--dx:4px;--dy:-38px;   left:50%; top:30%;"></i>
+          <i class="slash2"></i>
+          <i class="sp" style="--dx:-30px;--dy:-26px; left:30%; top:44%;"></i>
+          <i class="sp" style="--dx:34px;--dy:-20px;  left:62%; top:40%;"></i>
+          <i class="sp" style="--dx:-26px;--dy:20px;  left:38%; top:56%;"></i>
+          <i class="sp" style="--dx:30px;--dy:26px;   left:68%; top:52%;"></i>
+          <i class="sp" style="--dx:6px;--dy:-34px;   left:50%; top:38%;"></i>
+          <i class="sp" style="--dx:-10px;--dy:32px;  left:52%; top:60%;"></i>
         </div>
         <div class="ico">🗡</div><h3>Blind cutting</h3>
         <p>The view masks while you grind. Longer press cuts deeper — you only see the result after you release. Every cut is permanent.</p>
