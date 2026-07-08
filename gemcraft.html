@@ -1149,7 +1149,9 @@ function tintOf(st){ return st.color2!=null? {c1:st.color, c2:st.color2, dir:st.
 // ============================================================
 const app=document.getElementById('app');
 // #shot 旗標:開 preserveDrawingBuffer 讓 canvas.toDataURL 可用(拍宣傳截圖用,平常關=省效能)
-const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:location.hash.includes('shot')});
+// 同旗標也拿來做「無 UI 錄影模式」:進切割畫面時 HUD 直接不顯示(OBS 錄美術鏡頭用,見下方 SHOT_MODE)
+const SHOT_MODE=location.hash.includes('shot');
+const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:SHOT_MODE});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(0x000000,0);
@@ -2850,7 +2852,7 @@ function buildSystemCards(){
       <div class="gem">${tx('代表：','e.g. ')}${UI_LANG==='en'?sys.gemEn:sys.gem}</div><div class="shape">${tx('原石：','Rough: ')}${UI_LANG==='en'?sys.shapeEn:sys.shape}</div>`;
     c.onclick=()=>{ newSession(); spawnStone(sys);
       document.getElementById('selectScreen').style.display='none';
-      document.getElementById('hud').style.display='block';
+      document.getElementById('hud').style.display=SHOT_MODE?'none':'block';
       if(!tutShown){ tutShown=true; tutorialEl.style.display='flex'; }
       coachPosition(); };
     grid.appendChild(c);
