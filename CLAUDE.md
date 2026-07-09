@@ -95,6 +95,7 @@
 - [x] **#dev 校準工具**:URL 加 `#dev` → console 的 `__diag.run('oct8'|'srb57')` 一鍵照圖切完、`__diag.dump()` 傾印每個切面的角度/方位/d(%R)
 - [x] **UI 熱點重排**(2026-07 第三輪):操作台瘦身兩欄+不 hover 自動淡出(按壓中 `.pressing` 不淡);**下壓鈕上方「下一刀」資訊帶**(`#nextCutBar`,tier+角度+深度+下一齒,陣列快切鈕也搬到這);UI 整體提亮(`--dim`/面板不透明度/金紫邊);石頭+dop 視覺下移貼盤(`STONE_Y_OFF=-0.42`,切割數學不動,導覽器相機已補償)
 - [x] **標題演出**:機臂工作姿勢壓盤(armBase=0)→點擊進入抬臂緩動到 `PARK_ANGLE`;遊戲 dop 標題時隱藏;標題字逐字放大進場(`.tsChar`)
+- [x] **標題字體升級**(2026-07):大標(`.tsTitle`/選石畫面 `h1`)改字體堆疊 `"Cinzel","Noto Sans TC",serif`。Cinzel 無中文字符,瀏覽器逐字分流:拉丁字用 Cinzel(刻紋襯線,魔法感),中文落 Noto Sans TC——語言鈕切換時 `renderTitle()` 換文字,字體自動跟著對,不用另寫語言條件 CSS。副標(`.tsSub`)維持 Noto Sans TC/Segoe UI。字體從 Google Fonts CDN 載(`<head>` 的 `fonts.googleapis` 連結),離線打不開。只動字體層,切割邏輯/i18n 資料沒碰。
 - [x] **鏟寶石結算 + localStorage 儲存 + 蒐集頁**(2026-07 第三輪,分鏡=用戶手繪):
   - 每顆石頭在提交/報廢時用 `captureStoneThumb`(shotR 離屏渲染 96px JPEG ~3KB)拍縮圖入盤;結算卡兩欄:左=鏟子 SVG+縮圖彈跳撒入(`pourIn`),右=hero 主角石實時 3D 旋轉(`startHero`,MeshPhysicalMaterial+自產 envMap 亮晶晶)+原數據/鑑定
   - `Vault`(key `gemcraft.vault.v1`):一爐=一盤(session.vid/date),同 uid 重提交=覆蓋;上限 600 顆,超額砍最舊非⭐;無痕/擋儲存靜默降級
@@ -223,6 +224,7 @@
 | **鏟寶石結算** | `scoopSVG`、`stonePileHTML`(id hash 定位)、`renderResultScoop`、CSS `pourIn` |
 | **蒐集頁 / 石頭詳情** | `openGallery`/`renderGallery`/`openStoneDetail`、`#galleryScreen`/`#stoneDetail` |
 | **標題演出** | `.tsChar` 逐字動畫、`armBase`/`armCur`(工作姿勢↔抬臂) |
+| **標題字體(Cinzel+Noto Sans TC)** | `.tsTitle`/`.tsSub`/`#selectScreen .title h1` 的 `font-family`、`<head>` 的 `fonts.googleapis` 連結;改字體找這幾處 |
 | **音效(全程序化 WebAudio)** | `SFX`(init/toggle/startBGM/grindStart/grindStop/enchant/**arrayCut**)、`#sndBtn`;無音檔,BGM=音墊+五聲鐘,磨石=帶通噪聲+6.5Hz 顫抖,結算=琶音→收銀,**陣列快切=噪聲上掃(魔法陣展開)+五聲密集閃光(模擬同時切完一圈)+低音收尾**(2026-07,補上原本沒音效的缺);mute 存 localStorage `gemcraft.mute`;必須在使用者手勢後 init(自動播放政策) |
 | **附魔轉色(含雙色漸層)** | `TINTS` 陣列(value=數字→單色,`[c1,c2]`→漸層;紫黃晶配色=landing page 同款)、`#tintBtn`/`#tintRow`(leftTools 內原地展開,in-flow 非浮動),reset dot=回原石色;漸層核心=`applyGradAttr`(沿石頭局部方向把 c1→c2 烘進頂點色,材質底色改白+`vertexColors:true`,t 中段 ×1.6 收窄做出雙色帶分界)、`GRAD_DIRS`/`GRAD_GLYPH`(↕⤢↔⤡ 四方向,石頭局部座標=翻面自旋時顏色跟著石頭)、`#gradCtrl`(方向循環+⇅顏色對調=交換 color/color2,只在漸層時顯示)、`tintOf(state)`(縮圖/hero 共用的色描述 helper,單色=數字/漸層=物件);state 欄位 `color2`(null=單色)/`gradDir`;蒐集存檔記錄有存 color2/gradDir;淺色稜線/拋光自發光用兩色平均(`tone`)判斷;回溯不清漸層(附魔是視覺不是幾何) |
 | **淺色石稜線描邊** | `rebuildStone` 的 `lum>0.85` 分支(EdgesGeometry+polygonOffset) |
@@ -257,3 +259,6 @@
   他的參考來源也是上面的 gemologyproject。
 - 原始概念規格:`isekai_gemcraft_claude.md`(v1.0,當願景參考,不要改)。
 - Three.js r128 文件(切割渲染用)。
+- **Design System**(2026-07,Claude Design 雲端工具產出,**故意沒放進這個 repo**,獨立資料夾:
+  `C:\Users\yu2_7\Downloads\Isekai Gemcraft Design System`):品牌色票/字體/間距 token、React 元件(Button/Panel/Badge/GemMark/FeatureCard/GradientHeading/AppraisalCard)、landing/gemcraft 兩份 UI kit 重建版,給以後做視覺類任務(新宣傳頁、社群圖、新元件)當風格參考。
+  **注意**:它自己的 `readme.md` 寫「gemcraft.html 沒被 commit 到 repo,UI kit 是純靠 CLAUDE.md 文字描述重建的」——這句話**是錯的**(已用 `diff` 驗證,它資料夾裡的 `game/gemcraft.html`、`game/index.html` 其實跟本 repo 的檔案逐位元組相同,它有拉到真檔)。但既然它自己都誤判過一次資料來源,**以後這個工具吐出的任何「程式碼建議」用之前都要跟本 repo 實際檔案 diff 過,別照抄**——這次的 Cinzel 字體建議剛好是巧合地已經跟現有程式碼一致,不代表每次都會這樣準。

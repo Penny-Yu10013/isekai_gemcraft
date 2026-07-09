@@ -9,6 +9,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- UI 字體升級:Cinzel(拉丁字標,刻紋襯線)+ Noto Sans TC(中文,跨機一致)。
+     Cinzel 無中文字符,瀏覽器會自動「拉丁用 Cinzel、中文落 Noto」逐字分流。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0d0b14; --panel:#171326e0; --line:#4a3a78; --accent:#b48cff;
@@ -57,10 +62,12 @@
     padding-bottom:8vh; gap:18px;
   }
   .tsBox{text-align:center;}
-  .tsTitle{font-size:44px; font-weight:700; letter-spacing:.08em;
+  .tsTitle{font-size:44px; font-weight:700; letter-spacing:.1em;
+    font-family:"Cinzel","Noto Sans TC",serif;
     background:linear-gradient(90deg,#e9c7ff,#ffd479,#7fe6dc); -webkit-background-clip:text;
     background-clip:text; color:transparent; filter:drop-shadow(0 2px 18px #b48cff55);}
-  .tsSub{color:var(--dim); font-size:14px; margin-top:10px; letter-spacing:.15em;}
+  .tsSub{color:var(--dim); font-size:14px; margin-top:10px; letter-spacing:.15em;
+    font-family:"Noto Sans TC","Segoe UI",system-ui,sans-serif;}
   .tsHint{color:var(--gold); font-size:14px; letter-spacing:.3em; opacity:0;
     animation:tsFadeIn .8s ease 1.8s forwards, tsPulse 2.2s ease-in-out 2.8s infinite;}
   @keyframes tsPulse{0%,100%{opacity:.35;}50%{opacity:1;}}
@@ -83,7 +90,9 @@
     background:radial-gradient(120% 90% at 50% 10%,#1d1838 0%,#0c0a16 70%);
   }
   #selectScreen .title{text-align:center;}
-  #selectScreen .title h1{font-size:30px; background:linear-gradient(90deg,#cda6ff,#6fe0d6);
+  #selectScreen .title h1{font-size:30px; letter-spacing:.06em;
+    font-family:"Cinzel","Noto Sans TC",serif;
+    background:linear-gradient(90deg,#cda6ff,#6fe0d6);
     -webkit-background-clip:text; background-clip:text; color:transparent;}
   #selectScreen .title p{color:var(--dim); margin-top:6px; font-size:13px;}
   .systemGrid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; max-width:760px;}
