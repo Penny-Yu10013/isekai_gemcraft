@@ -6,6 +6,12 @@
 *.blend1
 *.blend2
 
+# 預告片運鏡算圖產物(可用 intro_flythrough.py 重生,不進 repo)
+machine_model/intro_frames/
+machine_model/intro_flythrough.blend
+machine_model/intro_frames_tight/
+machine_model/intro_flythrough_tight.blend
+
 # 系統雜物
 Thumbs.db
 desktop.ini
