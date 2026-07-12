@@ -162,7 +162,7 @@
 | **魔法快切導覽(coachmark)** | `COACH_STEPS`、`coachShow`/`coachHide`/`coachPosition`、HTML `#coachMark` |
 | **亮色玻璃主題 / 明暗切換** | CSS `html[data-theme="light"]` 區塊(疊加,不改暗色原規則)、JS `applyTheme`、HTML `#themeBtn` |
 | **中英雙語(i18n)** | 檔頭 `UI_LANG`/`tx(zh,en)`、檔尾 `I18N_STATIC` 表+`applyStaticLang`/`applyLang`、`#langBtn`;資料欄位 `nameEn/descEn/gemEn/shapeEn`、helper `dgName/dgDesc/lapName/tierLabel`;**加新 UI 文字一律走 tx() 或 I18N_STATIC,別寫死單語** |
-| **推廣頁 / 影片嵌入** | `index.html`(landing,獨立檔不影響遊戲);影片好了改裡面的 `const YT_ID=""` |
+| **推廣頁 / 影片嵌入** | `index.html`(landing,獨立檔不影響遊戲);`YT_ID` 已填預告片 youtu.be/-SmbzEfqV8Q(2026-07 發布) |
 | **宣傳截圖** | URL 加 `#shot`(或 `#shot-dev`)→ `renderer.domElement.toDataURL()`;成品在 `assets/`;注意背景分頁 rAF 暫停要手動 render 一幀 |
 | 對稱性評分 | `updateSymmetry` |
 | **機台模型載入/換裝/動態** | `loadMachine`、`setupMachine`(lapSpin/quillPark/gearSpin 分組)、`tickMachine`、`PARK_ANGLE` |
